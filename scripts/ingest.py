@@ -19,9 +19,9 @@ def load_documents(directory):
         text = extract_text_from_pdf(filepath)
         documents.append({"filename": os.path.basename(filepath), "content": text})
 
-        with open(filepath, 'r', encoding='utf-8') as f:
-            content = f.read()
-            documents.append({"filename": os.path.basename(filepath), "content": content})
+        # with open(filepath, 'r', encoding='utf-8') as f:
+        #     content = f.read()
+        #     documents.append({"filename": os.path.basename(filepath), "content": content})
     return documents
 
 

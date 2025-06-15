@@ -1,1 +1,8 @@
-PyMuPDF==1.22.3  # or PyPDF2
+fastapi
+uvicorn
+streamlit
+requests
+transformers
+sentence-transformers
+faiss-cpu
+PyMuPDF  # for PDF ingestion
