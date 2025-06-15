@@ -6,3 +6,4 @@ transformers
 sentence-transformers
 faiss-cpu
 PyMuPDF  # for PDF ingestion
+python-dotenv
