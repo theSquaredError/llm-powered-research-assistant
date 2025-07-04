@@ -90,11 +90,41 @@ Access the API at: http://localhost:8000/api/ask
 
 ---
 
-## 📦 Docker Usage
-```bash
-docker build -t llm-research-api .
-docker run -p 8000:8000 llm-research-api
+## Docker Usage
+
+You can run this project in a Docker container for easy deployment and reproducibility.
+
+### Build the Docker Image
+
+```sh
+docker build -t llm-research-assistant .
 ```
+
+### Run the Docker Container
+
+```sh
+docker run -p 8000:8000 llm-research-assistant
+```
+
+This will start the FastAPI server and expose it on [http://localhost:8000](http://localhost:8000).
+
+### Environment Variables
+If you need to set environment variables (such as `HF_TOKEN` for Hugging Face), you can pass them with the `-e` flag:
+
+```sh
+docker run -p 8000:8000 -e HF_TOKEN=your_hf_token llm-research-assistant
+```
+
+Or use a `.env` file:
+
+```sh
+docker run --env-file .env -p 8000:8000 llm-research-assistant
+```
+
+### Notes
+- Make sure your `requirements.txt` is up to date with all dependencies.
+- The Dockerfile installs system dependencies needed for PDF extraction (e.g., `poppler-utils`).
+- If you want to mount local data or models, use the `-v` flag with `docker run`.
 
 ---
 

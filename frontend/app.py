@@ -22,7 +22,14 @@ user_query = st.text_input(
 if st.button("Ask") and user_query:
     st.session_state.feedback_submitted = False
     with st.spinner("Thinking..."):
-        response = requests.post(API_URL, json={"query": user_query}, stream=True)
+        chat_history = st.session_state.chat_history.copy()
+        payload = {
+            "query": user_query,
+            "history": chat_history
+        }
+        response = requests.post(API_URL, json=payload, stream=True)
+
+        # response = requests.post(API_URL, json={"query": user_query}, stream=True)
         full_answer = ""
         response_placeholder = st.empty()
         for chunk in response.iter_lines():
