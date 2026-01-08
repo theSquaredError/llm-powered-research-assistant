@@ -11,7 +11,6 @@ A production-grade backend system that answers research questions using a combin
 - 🧪 Supports DPO fine-tuning pipeline (HuggingFace TRL)
 - 🧰 FastAPI backend with modular architecture
 - 📦 Containerized with Docker for deployment
-
 ---
 
 ## 📁 Project Structure
@@ -30,8 +29,8 @@ LLM-Powered-Research-Assistant/
 ├── data/                     # Raw arXiv papers
 ├── models/                   # Saved DPO fine-tuned models
 ├── scripts/                  # Ingestion + fine-tuning scripts
-│   ├── ingest.py              # Chunking + embedding logic
-│   └── train_dpo.py           # DPO fine-tuning workflow
+│   ├── ingest.py             # Chunking + embedding logic
+│   └── train_dpo.py          # DPO fine-tuning workflow
 ├── Dockerfile
 ├── requirements.txt
 └── README.md
