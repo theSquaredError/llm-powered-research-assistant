@@ -3,14 +3,36 @@
 A production-grade backend system that answers research questions using a combination of Retrieval-Augmented Generation (RAG), vector similarity search (FAISS), and a HuggingFace transformer-based question answering model. Feedback from users can be collected and used to fine-tune the model via Direct Preference Optimization (DPO).
 
 ---
+## Features
+- Semantic search over research papers using embeddings + FAISS
+- LLM-based answer generation with grounding
+- User feedback collection for training preference pairs
+<!-- - Supports DPO fine-tuning pipeline (HuggingFace TRL) -->
+- FastAPI backend with modular architecture
+<!-- - 📦 Containerized with Docker for deployment -->
+---
 
-## 🚀 Features
-- 🔍 Semantic search over research papers using embeddings + FAISS
-- 🤖 LLM-based answer generation with grounding
-- 📝 User feedback collection for training preference pairs
-- 🧪 Supports DPO fine-tuning pipeline (HuggingFace TRL)
-- 🧰 FastAPI backend with modular architecture
-- 📦 Containerized with Docker for deployment
+## 📌 Project Navigation
+
+This project is being built in public. Alongside the codebase, I maintain open documentation of design decisions, ongoing challenges, and planned improvements.
+
+**Explore the project:**
+
+- **🗺 Roadmap** — Planned features and development direction  
+  → [`ROADMAP.md`](ROADMAP.md)
+
+- **📖 Engineering Journal** — Challenges faced and how they were solved  
+  → [`/challenges`](./challenges)
+
+<!-- - **🏗 Architecture & Design Docs** — System design and technical decisions  
+  → [`/docs`](./docs) -->
+
+<!-- - **📝 Changelog** — Notable progress and version history  
+  → [`CHANGELOG.md`](CHANGELOG.md) -->
+
+<!-- - **🐛 Open Problems & Discussions**  
+  → [GitHub Issues](../../issues) -->
+
 ---
 
 ## 📁 Project Structure
@@ -81,7 +103,7 @@ Access the API at: http://localhost:8000/api/ask
 
 ---
 
-## 🧠 Model & Tools
+## Model & Tools
 - LLM: distilbert-base-cased-distilled-squad (default, replaceable)
 - Embedding: sentence-transformers (e.g. all-MiniLM-L6-v2)
 - VectorDB: FAISS
@@ -127,7 +149,7 @@ docker run --env-file .env -p 8000:8000 llm-research-assistant
 
 ---
 
-## 📚 Future Enhancements
+## Future Enhancements
 - [ ] Add Streamlit UI for interactive querying
 - [ ] Integrate LangChain agents
 - [ ] Add logging and monitoring (Prometheus)
@@ -135,5 +157,5 @@ docker run --env-file .env -p 8000:8000 llm-research-assistant
 
 ---
 
-## 👨‍🔬 Author
-Vikas Kumar
+<!-- ## Author
+Vikas Kumar -->
