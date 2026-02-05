@@ -10,7 +10,7 @@ EMBEDDING_MODEL = 'sentence-transformers/all-MiniLM-L6-v2'
 DATA_DIR = 'data/arxiv_papers'
 INDEX_PATH = 'data/faiss_index.index'
 DOCSTORE_PATH = 'data/docstore.json'
-
+OUT_DIR = 'data/'
 
 def load_documents(directory):
     documents = []
@@ -19,6 +19,9 @@ def load_documents(directory):
         documents.append({"filename": os.path.basename(filepath), "content": text})
     return documents
 
+def load_documents(directory):
+    
+    pass
 
 def build_index():
     model = SentenceTransformer(EMBEDDING_MODEL)

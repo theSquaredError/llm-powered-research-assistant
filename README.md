@@ -4,6 +4,7 @@ A production-grade backend system that answers research questions using a combin
 
 ---
 ## Features
+- For inferencing I am using Ollama with a quantized Llama3 model
 - Semantic search over research papers using embeddings + FAISS
 - LLM-based answer generation with grounding
 - User feedback collection for training preference pairs
@@ -74,14 +75,18 @@ python -m venv venv
 source venv/bin/activate  # or venv\Scripts\activate on Windows
 pip install -r requirements.txt
 ```
-
+### Run Qdrant locally (docker)
+```bash
+docker run -p 6333:6333 qdrant/qdrant 
+```   
 ### 3. Run the FastAPI app
 ```bash
 uvicorn app.main:app --reload
 ```
-
 Access the API at: http://localhost:8000/api/ask
 
+### 4. Run the streamlit app 
+streamlit run frontend/app.py
 ---
 
 ## 📬 API Endpoints
@@ -150,7 +155,7 @@ docker run --env-file .env -p 8000:8000 llm-research-assistant
 ---
 
 ## Future Enhancements
-- [ ] Add Streamlit UI for interactive querying
+
 - [ ] Integrate LangChain agents
 - [ ] Add logging and monitoring (Prometheus)
 - [ ] Deploy to cloud (AWS/GCP/Render)

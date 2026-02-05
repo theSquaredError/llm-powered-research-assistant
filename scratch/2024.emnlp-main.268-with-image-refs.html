@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<title>2024.emnlp-main.268</title>
+<meta name="generator" content="Docling HTML Serializer"/>
+<style>
+    html {
+        background-color: #f5f5f5;
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+    }
+    body {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem;
+        background-color: white;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h1, h2, h3, h4, h5, h6 {
+        color: #333;
+        margin-top: 1.5em;
+        margin-bottom: 0.5em;
+    }
+    h1 {
+        font-size: 2em;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 0.3em;
+    }
+    table {
+        border-collapse: collapse;
+        margin: 1em 0;
+        width: 100%;
+    }
+    th, td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+    }
+    th {
+        background-color: #f2f2f2;
+        font-weight: bold;
+    }
+    figure {
+        margin: 1.5em 0;
+        text-align: center;
+    }
+    figcaption {
+        color: #666;
+        font-style: italic;
+        margin-top: 0.5em;
+    }
+    img {
+        max-width: 100%;
+        height: auto;
+    }
+    pre {
+        background-color: #f6f8fa;
+        border-radius: 3px;
+        padding: 1em;
+        overflow: auto;
+    }
+    code {
+        font-family: monospace;
+        background-color: #f6f8fa;
+        padding: 0.2em 0.4em;
+        border-radius: 3px;
+    }
+    pre code {
+        background-color: transparent;
+        padding: 0;
+    }
+    .formula {
+        text-align: center;
+        padding: 0.5em;
+        margin: 1em 0;
+        background-color: #f9f9f9;
+    }
+    .formula-not-decoded {
+        text-align: center;
+        padding: 0.5em;
+        margin: 1em 0;
+        background: repeating-linear-gradient(
+            45deg,
+            #f0f0f0,
+            #f0f0f0 10px,
+            #f9f9f9 10px,
+            #f9f9f9 20px
+        );
+    }
+    .page-break {
+        page-break-after: always;
+        border-top: 1px dashed #ccc;
+        margin: 2em 0;
+    }
+    .key-value-region {
+        background-color: #f9f9f9;
+        padding: 1em;
+        border-radius: 4px;
+        margin: 1em 0;
+    }
+    .key-value-region dt {
+        font-weight: bold;
+    }
+    .key-value-region dd {
+        margin-left: 1em;
+        margin-bottom: 0.5em;
+    }
+    .form-container {
+        border: 1px solid #ddd;
+        padding: 1em;
+        border-radius: 4px;
+        margin: 1em 0;
+    }
+    .form-item {
+        margin-bottom: 0.5em;
+    }
+    .image-classification {
+        font-size: 0.9em;
+        color: #666;
+        margin-top: 0.5em;
+    }
+</style>
+</head>
+<body>
+<div class='page'>
+<h2>Retrospex: Language Agent Meets Offline Reinforcement Learning Critic</h2>
+<p>Yufei Xiang</p>
+<p>Yiqun Shen</p>
+<p>Yeqin Zhang</p>
+<p>Nanjing, China</p>
+<p>State Key Laboratory for Novel Software Technology, Nanjing University School of Artificial Intelligence, Nanjing University</p>
+<p>{xiangyf, yiqunshen, zhangyeqin}@smail.nju.edu.cn ncamtu@nju.edu.cn</p>
+<h2>Abstract</h2>
+<p>Large Language Models (LLMs) possess extensive knowledge and commonsense reasoning capabilities, making them valuable for creating powerful agents. However, existing LLM agent frameworks have not fully utilized past experiences for improvement. This work introduces a new LLM-based agent framework called Retrospex , which addresses this challenge by analyzing past experiences in depth. Unlike previous approaches, Retrospex does not directly integrate experiences into the LLM's context. Instead, it combines the LLM's action likelihood with action values estimated by a Reinforcement Learning (RL) Critic, which is trained on past experiences through an offline 'retrospection' process. Additionally, Retrospex employs a dynamic action rescoring mechanism that increases the importance of experience-based values for tasks that require more interaction with the environment. We evaluate Retrospex in ScienceWorld, ALFWorld and Webshop environments, demonstrating its advantages over strong, contemporary baselines 1 .</p>
+<h2>1 Introduction</h2>
+<p>The emergence of LLMs has paved the way for the development of LLM-based agents. These agents leverage the vast knowledge and commonsense reasoning capabilities within LLMs to tackle a wide range of tasks (Wang et al., 2022a; Yao et al., 2022a; Shridhar et al., 2020; Yang et al., 2018; Thorne et al., 2018). Despite their potential, a significant challenge arises from the dependence on general-purpose LLMs. Specifically, these agents might not be sufficiently adapted to the specific environments, potentially hindering their task completion effectiveness.</p>
+<p>Training LLM-based agents for new environments poses significant challenges. A common approach is to fine-tune the LLM using 'correct'</p>
+<p>1 https://github.com/Yufei-Xiang/Retrospex</p>
+<p>demonstrations-sample trajectories that successfully complete the task (Qin et al., 2024; Lin et al., 2023; Zeng et al., 2024). However, this approach focuses on correct behaviors, limiting the agent's ability to learn and recover from mistakes. Recently, efforts have been made to leverage imperfect experiences for training LLM agents. These methods fall into two categories: those that rely on working memory, like Reflexion (Shinn et al., 2023), and those that utilize cross-task experiences from long-term memory, such as Rememberer (Zhang et al., 2024). Despite the progress, experiences are still not sufficiently used, as they are only integrated into the LLM's context. Due to the limited context length of LLMs, this constrains the inclusion of more comprehensive experiences.</p>
+<p>In this work, we propose a novel LLM-based agent framework called Retrospex, which collects cross-task experiences for training a Reinforcement Learning (RL) Critic in a 'retrospection' stage. The RL Critic is then used to support the LLM in decision making. Unlike previous studies (see Figure 1), Retrospex does not directly integrate experiences into the context. Instead, it exploits an action rescoring strategy to combine the likelihood of the actions provided by the LLM and the action values estimated by the RL Critic. In addition, Retrospex dynamically increases the weight of action values from the RL Critic for tasks that require more interaction steps with the environment, allowing experiences to gradually play a more important role in difficult tasks.</p>
+<p>Retrospex has several advantages over previous approaches. First, compared to RL-based agents, Retrospex can leverage the strength of LLMs for more effective decision making. Second, compared to previous LLM-based agents, Retrospex can better utilize experiences without increasing the context length. Third, Retrospex is more flexible in controlling how much experience is needed at each step thanks to the dynamic scoring method. Finally,</p>
+<p>Cam-Tu Nguyen</p>
+<figure><figcaption><div class="caption">Figure 1: Comparing different architectures for LLM-based Agents</div></figcaption><img src="scratch/2024.emnlp-main.268-with-image-refs_artifacts/image_000000_29905a0024c58a7fe1bb7ade3925287864e20372d5fe790b116d282ea3e84d9e.png"></figure>
+<p>Retrospex is general and can be adapted to various LLMs or RL methods. In this paper, we implement RL Critic with a lightweight neural network, thus providing little inference overhead compared to using only LLMs for action selection.</p>
+<p>We evaluate Retrospex in three text-based simulation environments: ScienceWorld (Wang et al., 2022a), ALFWorld (Shridhar et al., 2020), and Webshop (Yao et al., 2022a). The experimental results demonstrate that integrating the RL Critic and dynamic action scoring in Retrospex enhances the performance of LLM-based agents, leading to success rate improvements of 9% in ScienceWorld, 3.5% in ALFWorld, and up to 5% in Webshop.</p>
+<p>Our contributions are summarized as follows:</p>
+<ul>
+<li style="list-style-type: '· ';">We propose Retrospex, a general framework for LLM-based agents that exploits the experience memory for training an RL Critic to support LLMs in decision making.</li>
+<li style="list-style-type: '· ';">We propose a dynamic action rescoring that combines LLM's likelihood and RL Critic action values. By doing so, we balance the two factors in planning, the current task information and past experiences.</li>
+<li style="list-style-type: '· ';">We test our method in three different environments, ScienceWorld, ALFWorld and Webshop. The results are promising and validate our framework's effectiveness.</li>
+</ul>
+<h2>2 Related Work</h2>
+<h2>2.1 Reasoning and Planning with LLM</h2>
+<p>LLMs have been exploited to tackle a wide range of tasks such as reasoning (Wei et al., 2022; Kojima et al., 2022; Yao et al., 2024), self-verification</p>
+<p>(Wang et al., 2022b; Miao et al., 2023), problem decomposition or formalization (Madaan et al., 2024; Zhou et al., 2022), and planning (Yao et al., 2022b; Wu et al., 2023; Wang et al., 2023).</p>
+<p>Most of these aforementioned studies, however, do not utilize the agent's past experiences for performance improvement. To overcome this issue, recent studies leverage relevant experiences to prompt LLM for reasoning, allowing LLM-based agents to learn from previous mistakes. Notable examples include Relexion (Shinn et al., 2023), Rememberer (Zhang et al., 2024), Salam (Wang and Li, 2023) and ExpeL (Zhao et al., 2024). However, this approach is still limited by the context length of LLMs, hindering the ability to fully utilize past experiences. Our proposed approach combines LLM's action likelihood with RL Critic's action values for action reranking. By doing so, there is no need to incorporate experiences into the LLM context, thereby mitigating the problem of long context.</p>
+<h2>2.2 LLMcombined with RL</h2>
+<p>RL has traditionally been used to train agents capable of making sequential decisions. With the advent of large language models (LLMs), many efforts have emerged to integrate LLMs with RL for agent training. These approaches can be broadly categorized into two groups, as outlined below.</p>
+<p>The first group uses RL techniques to train LLMs as policy models for acting in new environments. This includes GPT-Critic (Jang et al., 2022), LID (Li et al., 2022), AgentTuning (Zeng et al., 2024), PAC (Springenberg et al., 2024), and A 3 T (Yang et al., 2024). LID uses LLMs for policy initialization, while AgentTuning applies imitation learning</p>
+<p>(IL) to train adaptable agents. GPT-Critic and PAC, on the other hand, train LLMs as both critics and actors using offline RL. Like AgentTuning, A 3 T and LID, we use IL to train a base LLM for decisionmaking. However, unlike these methods, Retrospex also focuses on enhancing the base LLM's performance during inference without LLM update. This approach avoids the computational cost and potential risk of weakening the LLM's general capabilities that could arise from frequent updates.</p>
+<p>The second group uses RL methods to train assistants that support LLMs in decision-making via prompting, including Salam (Wang and Li, 2023), SayCan (Brohan et al., 2022), and Rememberer (Zhang et al., 2024). Salam uses IL to train an assistant who corrects mistakes and provides guidelines. Rememberer uses Q-learning to estimate action values for past experiences stored in memory. During inference, Rememberer retrieves the most relevant experiences (along with their corresponding action values) and incorporates them into the LLM's context. Both Salam and Rememberer extend the LLM's context with additional information. SayCan, on the other hand, estimates an affordance function to help ground the LLM's actions. The final action probability is calculated by combining the LLM's likelihood with the affordance value.</p>
+<p>Our approach is most closely related to SayCan but differs in two key aspects: 1) SayCan's affordance function is used for action grounding, whereas RL Critic in Retrospex is for action reevaluation. SayCan allows for combining any LLM with any affordance function, even independently trained ones. In contrast, we train an RL Critic on the action distribution supported by the LLM, enabling better value estimates for LLM's actions; 2) Retrospex exploits dynamic scoring, whereas SayCan employs a static score combination.</p>
+<h2>3 Methodology</h2>
+<p>Figure 2 demonstrates the training process of Retrospex which involves a warm-up phase and a retrospection phase. During the warm-up phase, we finetune the LLM based on expert (e.g. human) demonstrations and collect the working experiences of the LLM agent. In the retrospection stage, we train an RL Critic from the LLM agent's experiences using Implicit Q-learning (IQL), an offline RL method. By doing so, the RL Critic is expected to learn from the LLM agent's mistakes and assist in making better decisions in the future.</p>
+<h2>3.1 Warm-up Stage</h2>
+<p>Imitation Learning Inspired by (Lin et al., 2023; Zeng et al., 2024), we cast the action prediction task as a text generation task. We fine-tune the LLM with expert demonstrations (i.e., golden trajectories). The objective is to equip the LLM with fundamental knowledge about the agent's environment. This process, known as Imitation Learning (IL), is essential for LLMs of moderate size but can be skipped for powerful LLMs such as GPT-4.</p>
+<p>Formally, we train the LLM policy y = π ( x ) so that the generated action y is the most likely action π ∗ ( x ) taken by a human expert. Here, x is the given context that contains a task description , and a sequence of states , and actions . A state encapsulates the environment information at a specific time. For simplicity, we assume that states can be inferred from the initial agent state and subsequent observations from the environment. A golden trajectory ξ = { task 1 , s 1 , a 1 , s 2 , a 2 , s 3 , a 3 } can be decomposed into multiple (training) instances ( x 1 = { task 1 , s 1 } , y 1 = a 1 ), ( x 2 = { task 1 , s 1 , a 1 , s 2 } , y 2 = a 2 ), and ( x 3 = { task 1 , s 1 , a 1 , s 2 , a 2 , s 3 } , y 3 = a 3 ). The training objective then involves solving the following optimization problem:</p>
+<div class="formula-not-decoded">Formula not decoded</div>
+<p>where T denotes the set of golden trajectories and ξ is one particular trajectory. L NLL represents the negative log-likelihood loss, π ∗ ( x ) denotes the expert's action for state x , and ˆ π ∗ LLM is the estimated policy model (the fine-tuned LLM).</p>
+<p>Collecting Experiences Due to the complexity of the environment and the limited size of demonstration data, IL is often insufficient for obtaining an optimal policy. As such, we collect the experiences of the trained LLM interacting with the environment. Here, the format of each experience trajectory is similar to that of a golden trajectory, but an experience may contain suboptimal actions and/or be a failed attempt to finish users' tasks.</p>
+<h2>3.2 Retrospection Stage</h2>
+<p>The task of sequential decision can be formalized as a Markov Decision Process (MDP), which is denoted as ( S , A , p 0 ( s ) , p ( s ′ | s, a ) , r ( s, a ) , γ ) . Here, S , A are the state and action spaces, p 0 is the initial state distribution, p ( s ′ | s, a ) is the environment dynamics, r ( s, a ) is a reward function, and γ is a discount factor. The objective is to find a policy</p>
+<figure><figcaption><div class="caption">Figure 2: The training process of Retrospex includes two stages: 1) In the Warm-up stage , an imitation learning (IL) base agent is trained and used for experience collection; 2) In the Retrospection stage : Offline RL is used to train RL Critic from offline experiences. Here, s ∗ and a ∗ denote states and actions, respectively. In the retrospection stage, s ′ and a ′ indicate the following state and action.</div></figcaption><img src="scratch/2024.emnlp-main.268-with-image-refs_artifacts/image_000001_27e22261c5226e147b6d6e9feb14ce0c2a47b6a668f6aa671dfe0e5e8c72ee0d.png"></figure>
+<p>π ( a | s ) that maximizes the cumulative discounted return as follows:</p>
+<div class="formula-not-decoded">Formula not decoded</div>
+<p>RL can be used to solve the MDP problem and find π using interaction data. In general, RL can be conducted online, where we update the LLMbased agent whenever we have a new experience. However, doing so can be expensive and unstable (Nottingham et al., 2023). As a result, we follow the offline RL approach, where we collect experiences to memory, and update the LLM-based agent once we have enough experience.</p>
+<p>Offline RL uses a fixed experience memory to train the action-value function Q ( s, a ) . Here, the Q value corresponds to the expected cumulative reward (return) obtained by starting from the state s , performing action a , and then following the policy π . This work exploits Implicit Q-Learning (IQL) (Kostrikov et al., 2022), which aims to handle the issue of overestimating Q-function due to unseen actions in offline RL . IQL builds on approximate dynamic programming methods that minimize temporal difference errors as follows:</p>
+<div class="formula-not-decoded">Formula not decoded</div>
+<p>Here, D is the experience memory, s, s ′ are the current and next states respectively. A target Q- network Q ˆ θ is used for action selection, and an online Q-network Q θ is used for value estimation update at each training step. After each training batch, the target network is updated based on the online network. To prevent the target network from selecting actions that are not supported in the experience memory (due to max a ′ Q ˆ θ ) , IQL applies a separate state value function V ( s ) to estimate:</p>
+<div class="formula-not-decoded">Formula not decoded</div>
+<p>Let u = Q ˆ θ ( s, a ) -V φ ( s ) , L τ 2 ( u ) = | τ -✶ ( u &lt; 0) | u 2 is the upper expectile function. It has been proven that, by optimizing the above objective, we fit V φ ( s ) to approximate the maximum of Q ˆ θ over actions supported by the data distribution when τ → 1 (Theorem 3 by Kostrikov et al. (2022)). After this estimation, IQL can apply V ( s ) to update the Q ( s, a ) with simple MSE loss.</p>
+<div class="formula-not-decoded">Formula not decoded</div>
+<p>where the expectation is calculated by sampling ( s, a, s ′ ) ∼ D . The value functions (Q-network and V-network) can be realized in many forms, here we use GRU neural networks as shown in Figure 2. We encode task description, state, and action separately with different GRU blocks, then concatenate the embeddings together and send them to the next linear layers. We use 2 linear layers after the encoding layer to get the final q and v values. The structure of the V-network is similar to Q-network except that we do not have action a as the input and the output is the state value V ( s ) .</p>
+<figure><figcaption><div class="caption">Figure 3: Dynamic Action Rescoring in Retrospex, where t indicates the interaction step in the current trajectory.</div></figcaption><img src="scratch/2024.emnlp-main.268-with-image-refs_artifacts/image_000002_52180f2e5f29c4333d188851a2a3a29fce89512a74ac07dc508d47cf0cea8467.png"></figure>
+<h2>3.3 Inference Stage</h2>
+<p>After training, LLM and RL Critic (Q network) are used for inference as follows.</p>
+<p>Action Mapping To ensure that the action candidates sampled by the LLM can be executed in the environment, we map the LLM response to the valid action space as follows:</p>
+<ol>
+<li style="list-style-type: '1) ';">Given the current context including task description, past states and actions, the LLM generates K next action candidates using nuclear sampling with a temperature of 1 and top-p of 0.95;</li>
+<li style="list-style-type: '2) ';">Filter out the candidates that are already valid actions (assuming there are m candidates), and directly retain this part of the candidates;</li>
+<li style="list-style-type: '3) ';">Obtain embeddings of the ( K -m ) invalid candidates, and those of all valid actions through the Sentence Transformer (Reimers and Gurevych, 2019); Find the ( K -m ) valid actions that have the largest sum of cosine similarities with all the candidates, excluding those that have been included in Step 2;</li>
+<li style="list-style-type: '4) ';">The final candidate of all actions is the union of actions in Step 2 and Step 3.</li>
+</ol>
+<p>Dynamic Action Rescoring The LLM first generates several responses by nuclear sampling. After mapping the responses into action space as aforementioned, LLM provides the probabilities p of these action candidates. We then normalize these values to obtain LLM scores.</p>
+<div class="formula-not-decoded">Formula not decoded</div>
+<p>The top-K actions are fed into the RL Critic. The value function will give the action value q for each action, which is then normalized as follows.</p>
+<div class="formula-not-decoded">Formula not decoded</div>
+<p>To decide which candidate will be chosen, we combine the 2 scores together as the final score S and select one with the highest score as follows:</p>
+<div class="formula-not-decoded">Formula not decoded</div>
+<p>where b, d ∈ [0 , 1] and α ( t ) is the dynamic combination weight between p and q . When t = 0 (corresponding to α ( t ) of 1 ), we have few observations and rely more on the commonsense of the LLM to guide action selection. As t increases, α ( t ) decreases with a discount factor d , allowing the RL Critic to have a greater influence on decisionmaking. However, we set a lower bound of b for α ( t ) to ensure the LLM's role is not reduced too drastically for long trajectories.</p>
+<div class="formula-not-decoded">Formula not decoded</div>
+<h2>4 Experiments</h2>
+<p>The experiments are conducted in three environments: ScienceWorld (Wang et al., 2022a), ALFWorld (Shridhar et al., 2020) and Webshop (Yao et al., 2022a). We use Average Score (AS) and Success Rate (SR) to measure the performance 2 . Both metrics (AS and SR) are scaled to the range of [1 , 100] in all three environments. The training and testing sets for the three environments are summarized in Table 1 and Table 2.</p>
+<h2>4.1 ScienceWorld</h2>
+<p>Experimental Setup ScienceWorld is a complex interactive text environment that tests an agent's scientific commonsense. In this environment, agents are required to navigate through 10 interconnected locations (e.g., workshop, kitchen) and utilize the tools to complete tasks such as 'determine if the metal fork is electrically conductive'. The environment contains 200 objects, 25 high-level actions, resulting in approximately 200k possible actionobject combinations. We collect 2157 golden (i.e. successful) trajectories to train Flan-T5-large 3 in</p>
+<p>2 ALFWorld only supports SR for evaluation</p>
+<p>3 https://huggingface.co/google/flan-t5-large</p>
+<table><caption><div class="caption">Table 1: Training data used in the warmup and retrospection stages of Retrospex. Here, AgentInstruct+ is a dataset used by (Zeng et al., 2024) for agent training, which consists of 1866 golden trajectories from a mix of 6 environments including Webshop (351 golden trajectories) and ALFWorld (336 golden trajectories). SR denotes the percentage of the successful trajectories in the memory used for retrospection stage training. We train one LLM for both ALFWorld and Webshop environments.</div></caption><tbody><tr><th>Env</th><th colspan="2">Warm-up Stage</th><th colspan="3">Retrospection Stage</th></tr><tr><td></td><th>LLM</th><th># Training data</th><th>IQL</th><th># Training Trajs</th><th>SR</th></tr><tr><td>SciWorld</td><td>Flan-T5-large (770M)</td><td>2157 golden</td><td>GRU (2.7M)</td><td>2566</td><td>36</td></tr><tr><td>ALFWorld Webshop</td><td>LLaMA3-8B-Instruct</td><td>AgentInstruct+</td><td>GRU (2.7M)</td><td>2000</td><td>67</td></tr><tr><td></td><td></td><td></td><td>GRU (2.7M)</td><td>1500</td><td>44</td></tr></tbody></table>
+<table><caption><div class="caption">Table 2: The number of subtasks and testing samples in the three tested environments. For Webshop, we conduct evaluation on three different test sets used by Zhang et al. (2024) (100 samples), Zeng et al. (2024) (200 samples), and Yang et al. (2024) (251 samples).</div></caption><tbody><tr><th>Env</th><th># Subtasks</th><th># Test Samples</th></tr><tr><td>SciWorld</td><td>30</td><td>270</td></tr><tr><td>ALFWorld</td><td>6</td><td>134</td></tr><tr><td>Webshop</td><td>-</td><td>100 / 200 / 251</td></tr></tbody></table>
+<p>the warm-up stage, and 2566 trajectories, which contain both fail and successful ones with SR of 36%, for training GRU-based RL Critic in the retrospection stage. In the warm-up stage, we follow the same training strategy for imitation learning (IL) specified in SwiftSage (Lin et al., 2023). We denote this IL agent as IL-T5, which corresponds to the Swift model in SwiftSage as well as Retrospex (w/o retrospection). For dynamic re-scoring, we choose d = 0 . 97 , b = 0 . 6 as our hyper-parameters.</p>
+<p>Baselines We compare Retrospex to baselines of different types: (1) LLM-based agents ReAcT (Yao et al., 2022b) and Reflexion (Shinn et al., 2023); (2) online RL agent DRRN (He et al., 2016); and (3) SayCan (Brohan et al., 2022) which combines LLM with an affordance function for action grounding. The details for SayCan, ReAct and Reflexion are provided in SwiftSage paper (Lin et al., 2023). It is noteworthy that we do not compare to SwiftSage here as it exploits two large language models (GPT and IL-T5) for inference, resulting in a somewhat unfair comparison. The results of GPTP3.5-based ReAct and DRRN are produced by ourselves.</p>
+<p>Results The experimental results on ScienceWorld are shown in Table 3, where several observations can be drawn. Firstly, it can be seen that</p>
+<table><caption><div class="caption">Table 3: The AS and SR on ScienceWorld. Here, † denotes the results from SwiftSage (Lin et al., 2023).</div></caption><tbody><tr><th>Method</th><th>LLM</th><th>AS</th><th>SR</th></tr><tr><th>DRRN (our run)</th><td>GRU</td><td>14.13</td><td>0</td></tr><tr><th>ReAcT (our run)</th><td>GPT3.5</td><td>14.60</td><td>0.03</td></tr><tr><th>SayCan †</th><td>GPT4+SBERT</td><td>33.82</td><td>-</td></tr><tr><th>ReAcT †</th><td>GPT4</td><td>36.43</td><td>-</td></tr><tr><th>Reflexion †</th><td>GPT4</td><td>45.34</td><td>-</td></tr><tr><th>IL-T5</th><td>Flan-T5-large</td><td>48.80</td><td>27.0</td></tr><tr><th>Retrospex</th><td>Flan-T5-large</td><td>55.98</td><td>36.0</td></tr></tbody></table>
+<p>the performance of DRRN is significantly worse than other baselines, confirming the challenge of learning an independent RL agent in an environment with a large action space . Secondly, GPT4based ReAct models can achieve relatively good results without any training, suggesting that powerful LLMs can exploit its commonsense to recognize meaningful action-object combinations for better results. Thirdly, the result of SayCan is not satisfactory with GPT4+SBERT, suggesting that exploiting a value function that is trained independently from the LLM-based actor might not be optimal . Last but not least, it is observable that IL-T5, a relatively small-size LLM-based IL agent, can outperform Reflexion, which is based on the powerful GPT4 model. This shows that the knowledge of small size LLM (T5) might be sufficient for ScienceWorld, and IL is important to ground an agent in the targeted environment. In addition, the fact that Retrospex significantly outperforms IL-T5 by 7 points in AS and 9 points in SR suggests the importance of the retrospection stage for agents to explore and learn from mistakes . A more detailed list of all 30 sub-tasks of ScienceWorld can be seen in Table 8 in the Appendix.</p>
+<table><caption><div class="caption">Table 4: Overall results on ALFWorld. Here, † denotes the results of Reflexion (Shinn et al., 2023) and ExpeL (Zhao et al., 2024) from (Zhao et al., 2024). The result of A 3 T is from (Yang et al., 2024).</div></caption><tbody><tr><th>Method</th><th>LLM</th><th>SR</th></tr><tr><td>Reflexion †</td><td>GPT3.5</td><td>40.3</td></tr><tr><td>ExpeL †</td><td>GPT3.5</td><td>59.0</td></tr><tr><td>A 3 T (round=0)</td><td>Mistral-7B-Instruct</td><td>86.0</td></tr><tr><td>A 3 T (round=1)</td><td>Mistral-7B-Instruct</td><td>94.0</td></tr><tr><td>IL-LLaMA3</td><td>LLaMA3-8B-Instruct</td><td>83.5</td></tr><tr><td>Retrospex</td><td>LLaMA3-8B-Instruct</td><td>87.0</td></tr></tbody></table>
+<h2>4.2 ALFWorld</h2>
+<p>Experimental Setup ALFWorld is also a suite of text-based environments that challenge an agent to solve multi-step tasks based on TextWorld (Côté et al., 2018). The action and task formats of ALFWorld are similar to ScienceWorld but simpler. We exploit the AgentInstruct+ dataset for training a LLaMA3-8B-Instruct-based IL agent in the warmup stage and collect 2000 trajectories with SR of 67% for restrospection stage training. Here, AgentTuining+ includes both AgentInstruct 4 for agent learning capabilities and ShareGPT 5 for general capability. The AgentInstruct+ dataset contains the golden trajectories of both ALFWorld and Webshop environments, thus we train only one IL agent for being used in both environments. The combination parameters of dynamic action rescoring in Retrospex for ALFWorld are d = 0 . 95 , b = 0 . 6 .</p>
+<p>Baselines We compare to Reflexion (GPT 3.5) and ExpeL (Zhao et al., 2024) and A 3 T (Yang et al., 2024). Concurrent to our work, Yang et al. (2024) proposes A 3 T , a self-improvement framework to train LLM agents by updating LLM multiple rounds. For the first round (round=0), imitation learning is used to train LLM from golden trajectories, which is similar to our warm-up stage. For other rounds (round &gt; 0), A 3 T updates LLM using contrastive learning methods like DPO (Rafailov et al., 2023). A 3 T also proposes an interesting method for generating composed trajectories for exploration. The details of Reflexion, ExpeL, A 3 T can be found in A 3 T paper (Yang et al., 2024).</p>
+<p>Results Table 4 presents the performance of compared methods on the ALFWorld environment. The</p>
+<p>4 https://huggingface.co/datasets/THUDM/AgentInstruct</p>
+<p>5 https://huggingface.co/datasets/anon8231489123/Share GPT_Vicuna_unfiltered</p>
+<p>results indicate that Retrospex outperforms the base IL model (IL-LLaMA3) and A 3 T (round=0) but falls short when compared to A 3 T (round=1). Upon examining the training details of A 3 T , we observe that A 3 T leverages 981 golden trajectories for round=0 and 3431 trajectories (with a 90.2% success rate) for round=1. In contrast, Retrospex uses only 351 Webshop golden trajectories during the warm-up phase and 2000 trajectories with a lower success rate of 67% for the retrospection phase (see Table 1). The discrepancy in data quality and quantity accounts for the underperformance of IL-LLaMA3 compared to A 3 T (round=0) and of Retrospex compared to A 3 T (round=1).</p>
+<p>Although Retrospex does not achieve state-ofthe-art (SOTA) performance on ALFWorld, our retrospection strategy remains valuable for three key reasons. First, the retrospection phase significantly improves the base IL agent, as evidenced by the 3.5% success rate (SR) increase of Retrospex compared to IL-LLaMA3. Second, the retrospection phase is much more cost-effective than a full training round in A 3 T . Specifically, A 3 T requires direct updates to a large (7B) LLM, while Retrospex only updates a smaller RL-Critic model-a GRU with 2.7M parameters. Frequently updating LLM is not only computationally expensive but also risks weakening its general capability due to catastrophic forgetting. Finally, the strategies of Retrospex and A 3 T can be combined as a small RL-Critic model can be trained to assist with inference between LLM update cycles in A 3 T , offering a more practical approach.</p>
+<h2>4.3 Webshop</h2>
+<p>Experimental Setup Webshop (Yao et al., 2022a) is an online shopping website environment with 1.18M products and 12k human instructions. An agent is required to purchase a product based on a user instruction such as 'I am looking for a nightstand with drawers.' To complete the task, the agent needs to perform actions such as searching 'nightstand drawers,' or choosing clickable buttons. We use the same IL-LLaMA3 as the IL base agent as described in the previous section. The RL-Critic, however, is trained specifically for Webshop. The parameters of dynamic action rescoring for Webshop are d = 0 . 9 , b = 0 . 5 .</p>
+<p>Baselines We compare with three main baselines Rememberer (Zhang et al., 2024), AgentLM (Zeng et al., 2024), and A 3 T . As different studies con-</p>
+<table><caption><div class="caption">Table 5: Overall results on Webshop, where † and ‡ results are from (Zhang et al., 2024) and (Zeng et al., 2024). The result of A 3 T is from (Yang et al., 2024).</div></caption><tbody><tr><th>Method</th><th>LLM</th><th>AS</th><th>SR</th></tr><tr><th colspan="4">Rememberer (Zhang et al., 2024) test set</th></tr><tr><th>ReAcT †</th><td>GPT3.5</td><td>66.0</td><td>36.0</td></tr><tr><th>Rememberer †</th><td>GPT3.5</td><td>68.0</td><td>38.0</td></tr><tr><th>IL-LLaMA3</th><td>LLaMA3 8B</td><td>76.2</td><td>42.4</td></tr><tr><th>Retrospex</th><td>LLaMA3 8B</td><td>74.6</td><td>46.0</td></tr><tr><th colspan="4">AgentLM (Zeng et al., 2024) test set</th></tr><tr><th>ReAcT ‡</th><td>GPT4</td><td>58.6</td><td>-</td></tr><tr><th>AgentLM ‡</th><td>LLaMA2 7B</td><td>63.6</td><td>-</td></tr><tr><th>AgentLM ‡</th><td>LLaMA2 13B</td><td>70.8</td><td>-</td></tr><tr><th>IL-LLaMA3</th><td>LLaMA3 8B</td><td>77.1</td><td>45.5</td></tr><tr><th>Retrospex</th><td>LLaMA3 8B</td><td>77.7</td><td>50.5</td></tr><tr><th colspan="4">AgentBoard (Ma et al., 2024) test set</th></tr><tr><th>A 3 T (round=0)</th><td>Mistral 7B</td><td>72.0</td><td>-</td></tr><tr><th>A 3 T (round=1)</th><td>Mistral 7B</td><td>73.5</td><td>-</td></tr><tr><th>IL-LLaMA3</th><td>LLaMA3 8B</td><td>76.5</td><td>44.2</td></tr><tr><th>Retrospex</th><td>LLaMA3 8B</td><td>77.2</td><td>49.0</td></tr></tbody></table>
+<p>duct evaluations on different subsets of the original Webshop test tasks, we conduct multiple tests for fair and comprehensive comparisons. Specifically, Rememberer uses the first 100 samples for testing whereas AgentLM uses 200 samples. A 3 T both compares with AgentLM 6 and reports the result on AgentBoard test set. Here, we compare to A 3 T results on the AgentBoard test set.</p>
+<p>Results Table 5 shows the performance of Retrospex and other baselines on Webshop environment. The experiment verifies the effectiveness of Retrospex over Rememberer, AgentLM, and A 3 T (round=0), (round=1) on their respective reported test sets. It is noteworthy that Retrospex performs well compared to A 3 T even though we use one base LLM for ALFWorld and Webshop, whereas A 3 T finetunes another LLM specifically for Webshop. The retrospection stage in Retrospex helps improve the success rate (SR) significantly over three test sets and improves AS in two over three test sets. One explanation for why Retrospex obtains higher SR yet lower AS in the Rememberer test set is that IL-LLaMA3 may not return correct products in many cases (fail cases) yet it returns close enough products (high scores). We leave further investigation to future work.</p>
+<p>6 A 3 T doesn't explicitly state if AgentLM test set is used</p>
+<table><caption><div class="caption">Table 6: Average reward scores on different task complexity on ScienceWorld</div></caption><tbody><tr><td></td><th>Short</th><th>Medium</th><th>Long</th></tr><tr><th>SayCan</th><td>43.83</td><td>36.55</td><td>23.65</td></tr><tr><th>IL-T5</th><td>90.87</td><td>42.71</td><td>25.56</td></tr><tr><th>T5-then-IQL</th><td>68.17</td><td>31.18</td><td>19.93</td></tr><tr><th>Retrospex</th><td>95.49</td><td>55.18</td><td>31.93</td></tr></tbody></table>
+<h2>5 Further Analysis</h2>
+<h2>5.1 Analysis on Task Complexities</h2>
+<p>To evaluate the performance of Retrospex across varying task complexities, we categorize the tasks in ScienceWorld into three levels: short (fewer than 20 steps), medium (20 to 50 steps), and long (more than 50 steps). We then calculate the average score (AS) for each complexity level, with the results presented in Table 6. Across all three levels, Retrospex demonstrates significant improvements. Notably, tasks with medium-length trajectories show an average score increase of more than 10 points, while tasks with short and long trajectories see improvements of over 5 points.</p>
+<p>We also report the results for T5-then-IQL, where the top actions are reranked based solely on RL-Critic scores. The inferior performance of T5-then-IQL compared to IL-T5 suggests that the LLM's likelihood should not be disregarded when selecting actions. This performance drop is especially pronounced in tasks with short trajectories, highlighting the importance of LLM when we have fewer observations. This supports our intuition behind dynamic scoring, where we place greater trust in the LLM when the step count t is small.</p>
+<h2>5.2 Analysis on Combination Parameters</h2>
+<p>In order to investigate the effect of differences in the parameters used for the combination of dynamic action scoring, we test different d and b on ScienceWorld and the results are shown in Table 7.</p>
+<p>Necessity of Two Scores When using only the IQL score ( d = 0 , b = 0 ), the average scores drop significantly for three different complexity settings. When we use LLM only (first column), the performance is poor compared to the results of the score combination. Both scores, therefore, are essential for performance improvement.</p>
+<p>Necessity of Dynamic Combination We study if a dynamic combination is necessary. For that, we</p>
+<table><caption><div class="caption">Table 7: Results on ScienceWorld with different dynamic scoring parameters</div></caption><tbody><tr><td></td><th>IL-T5</th><th>d =0 b =0</th><th>d =0.95 b =0.25</th><th>d =0.97 b =0.5</th><th>d =0.97 b =0.6</th><th>d =0.99 b =0.6</th><th>Static combination 0.6 p +0.4 q</th></tr><tr><th>Short</th><td>90.87</td><td>68.17</td><td>94.63</td><td>96.43</td><td>95.49</td><td>93.11</td><td>94.35</td></tr><tr><th>Medium</th><td>42.71</td><td>31.18</td><td>52.40</td><td>54.68</td><td>55.18</td><td>51.63</td><td>54.63</td></tr><tr><th>Long</th><td>25.56</td><td>19.93</td><td>25.58</td><td>29.33</td><td>31.93</td><td>35.39</td><td>29.21</td></tr><tr><th>AS</th><td>48.80</td><td>36.7</td><td>52.51</td><td>55.13</td><td>55.98</td><td>55.63</td><td>54.37</td></tr></tbody></table>
+<p>select and fix a combination of the action likelihood and value based on the study of different b values. The last column of Table 7 shows the score with a static combination. It is observable that static combination underperforms dynamic combination, verifying the role of the discount factor d in incorporating more experiences for long-horizon tasks.</p>
+<p>Parameter Choice We analyze the two parameters d and b in dynamic action rescoring. First, when d is small, the weight of the LLM score decreases rapidly within a smaller number of steps. Consequently, the agent quickly shifts the focus to action values from IQL, leading to a drop in performance. Secondly, for our method to be sufficiently effective, the LLM still needs a relatively large weight even at the end of a long trajectory. As such, we need to keep the value of b high to ensure that the validity of the LLM scores is maintained.</p>
+<h2>5.3 Analysis on Inference Time Cost</h2>
+<p>Given the context of length N containing past interactions and thoughts, LLM-based agents need to generate the next action. As the action length is often much shorter compared to the context length, we simplify the analysis by estimating the inference time for ReAct, Reflexion, Rememberer and Retrospex to generate one-token action with Transformer-based LLM.</p>
+<p>ReAct The time for ReAct to generate one-token action is dominated by attention operations in LLM, which is N 2 × T 1 where T 1 is the computational time depending on the LLM model and the hardware infrastructure.</p>
+<p>Reflexion The time for Reflexion to generate onetoken action is dominated by ( N + R ) 2 × T 1 , where R contains the historical trials and errors.</p>
+<p>Rememberer The time complexity is ( N + Kl ) 2 T 1 +( MT 2 + M log K ) . Here, K indicates the number of experiences incorporated into the LLM</p>
+<p>context, and l is the average experience length. Assuming bruteforce search with the support of a max-heap, MT 2 + M log K is the time for retrieving K relevant experiences in the memory of size M , and T 2 is the time for calculating the similarity between the current trajectory and each trajectory in the memory. The size of memory M will be accumulated, leading to longer inference over time.</p>
+<p>Retrospex The time for one-token action generation is N 2 × T 1 + KT 3 where T 3 is the time for calculating the Q-value with GRU. As T 1 /greatermuch T 3 , Retrospex adds little inference overhead compared to ReAct. However, as we can obtain better performance with Retrospex with smaller LLM (smaller T 1 ), Retrospex can still win in inference time compared to ReAct based on GPT4. Compared to Reflexion and Rememberer, due to shorter context, Retrospex is more efficient. In Retrospex, we still need to sample top-K actions, however, this is done only on the last layer, which is much less demanding compared to N 2 × T 1 for LLM.</p>
+<h2>6 Conclusion</h2>
+<p>This work introduces a novel LLM-based agent framework, named Retrospex, that addresses the limitations of prior approaches in leveraging experiences for decision-making. Retrospex overcomes the context length restriction by separating experience analysis (through a Reinforcement Learning Critic) from LLM-based action selection. This enables the agent to effectively utilize past experiences while retaining the strengths of LLMs. Additionally, the dynamic action rescoring method allows for flexible control over the influence of experiences based on task complexity. Evaluations demonstrate that Retrospex achieves significant performance improvements compared to strong baselines, highlighting its potential for real-world applications of LLM agents.</p>
+<h2>Limitations</h2>
+<p>There are several limitations to our work. First, LLM-dependent action sampling and short-term evaluation can include limitations and biases from the LLM itself. In addition, the closely related memory can also suffer from distributional biases in trajectories and lack of exploration of the action space. Future work can be investigated to expand the action exploration in the collection stage, thus gathering trajectories with more diversity. Second, current work does not explore the potential of incorporating verbal feedback such as those from Reflexion for better retrospection of past experiences. Third, it will be interesting to improve the dynamic action scoring with an automatic module that decides the weights of experiences instead of relying on predefined hyperparameters.</p>
+<h2>Ethic Statement</h2>
+<p>In our study, we utilize open simulation environments, ensuring that there is no direct interaction with humans that could potentially cause harm. The training data used in our experiments is sourced from publicly available datasets, all of which are thoroughly cited and referenced in the main text to maintain transparency. By limiting our work to simulated settings and publicly accessible data, we minimize ethical concerns related to privacy, consent, and safety. However, it is important to emphasize that while the current study avoids real-world risks, the broader application of LLM-based agents requires careful consideration. As these technologies are increasingly deployed in real-world settings, it is essential to ensure that they are aligned with human values, respect ethical guidelines, and mitigate potential biases.</p>
+<h2>Acknowledgement</h2>
+<p>We thank the anonymous reviewers for their constructive feedback that helps improve this work significantly. Our study was partially supported by computing resources from NJU, the State Key Laboratory for Novel Software Technology, and Intelligent Integration Co. LTD (INT2), Vietnam.</p>
+<h2>References</h2>
+<p>Anthony Brohan, Yevgen Chebotar, Chelsea Finn, Karol Hausman, Alexander Herzog, Daniel Ho, Julian Ibarz, Alex Irpan, Eric Jang, Ryan Julian, et al. 2022. Do as i can, not as i say: Grounding language in robotic affordances. In Conference on robot learning, PMLR .</p>
+<p>Marc-Alexandre Côté, Ákos Kádár, Xingdi Yuan, Ben A. Kybartas, Tavian Barnes, Emery Fine, James Moore, Matthew J. Hausknecht, Layla El Asri, Mahmoud Adada, Wendy Tay, and Adam Trischler. 2018. Textworld: A learning environment for text-based games. In Twenty-seventh International Conference on Artificial Intelligence, IJCAI .</p>
+<ul>
+<li>Scott Fujimoto, Herke Hoof, and David Meger. 2018. Addressing function approximation error in actorcritic methods. In International conference on machine learning .</li>
+</ul>
+<p>Ji He, Mari Ostendorf, Xiaodong He, Jianshu Chen, Jianfeng Gao, Lihong Li, and Li Deng. 2016. Deep reinforcement learning with a combinatorial action space for predicting popular reddit threads. In Proceedings of the 2016 Conference on Empirical Methods in Natural Language Processing, EMNLP .</p>
+<p>Youngsoo Jang, Jongmin Lee, and Kee-Eung Kim. 2022. Gpt-critic: Offline reinforcement learning for end-toend task-oriented dialogue systems. In Ninth International Conference on Learning Representations, ICLR .</p>
+<p>Takeshi Kojima, Shixiang Shane Gu, Machel Reid, Yutaka Matsuo, and Yusuke Iwasawa. 2022. Large language models are zero-shot reasoners. In Thirty-sixth Conference on Neural Information Processing Systems, NeurIPS .</p>
+<p>Ilya Kostrikov, Ashvin Nair, and Sergey Levine. 2022. Offline reinforcement learning with implicit q-learning. In Tenth International Conference on Learning Representations, ICLR .</p>
+<p>Shuang Li, Xavier Puig, Chris Paxton, Yilun Du, Clinton Wang, Linxi Fan, Tao Chen, De-An Huang, Ekin Akyürek, Anima Anandkumar, et al. 2022. Pretrained language models for interactive decisionmaking. In Thirty-sixth Conference on Neural Information Processing Systems, NeurIPS .</p>
+<p>Bill Yuchen Lin, Yicheng Fu, Karina Yang, Faeze Brahman, Shiyu Huang, Chandra Bhagavatula, Prithviraj Ammanabrolu, Yejin Choi, and Xiang Ren. 2023. Swiftsage: A generative agent with fast and slow thinking for complex interactive tasks. In Thirtyseventh Conference on Neural Information Processing Systems, NeurIPS .</p>
+<p>Chang Ma, Junlei Zhang, Zhihao Zhu, Cheng Yang, Yujiu Yang, Yaohui Jin, Zhenzhong Lan, Lingpeng Kong, and Junxian He. 2024. Agentboard: An analytical evaluation board of multi-turn llm agents. In Twelfth International Conference on Learning Representations, ICLR .</p>
+<p>Aman Madaan, Niket Tandon, Prakhar Gupta, Skyler Hallinan, Luyu Gao, Sarah Wiegreffe, Uri Alon, Nouha Dziri, Shrimai Prabhumoye, Yiming Yang,</p>
+<ul>
+<li>et al. 2024. Self-refine: Iterative refinement with selffeedback. In Thirty-seventh Conference on Neural Information Processing Systems, NeurIPS .</li>
+<li>Ning Miao, Yee Whye Teh, and Tom Rainforth. 2023. Selfcheck: Using llms to zero-shot check their own step-by-step reasoning. In Twelfth International Conference on Learning Representations, ICLR .</li>
+<li>Kolby Nottingham, Yasaman Razeghi, Kyungmin Kim, JB Lanier, Pierre Baldi, Roy Fox, and Sameer Singh. 2023. Selective perception: Optimizing state descriptions with reinforcement learning for language model actors. arXiv preprint arXiv:2307.11922 .</li>
+<li>Yujia Qin, Shihao Liang, Yining Ye, Kunlun Zhu, Lan Yan, Yaxi Lu, Yankai Lin, Xin Cong, Xiangru Tang, Bill Qian, et al. 2024. Toolllm: Facilitating large language models to master 16000+ real-world apis. In Eleventh International Conference on Learning Representations, ICLR .</li>
+<li>Rafael Rafailov, Archit Sharma, Eric Mitchell, Christopher D Manning, Stefano Ermon, and Chelsea Finn. 2023. Direct preference optimization: Your language model is secretly a reward model. In Thirty-seventh Conference on Neural Information Processing Systems, NeurIPS .</li>
+<li>Samyam Rajbhandari, Olatunji Ruwase, Jeff Rasley, Shaden Smith, and Yuxiong He. 2021. Zero-infinity: Breaking the gpu memory wall for extreme scale deep learning.</li>
+<li>Nils Reimers and Iryna Gurevych. 2019. Sentence-bert: Sentence embeddings using siamese bert-networks. In Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing, EMNLP-IJCNLP .</li>
+<li>Noah Shinn, Federico Cassano, Ashwin Gopinath, Karthik R Narasimhan, and Shunyu Yao. 2023. Reflexion: Language agents with verbal reinforcement learning. In Thirty-seventh Conference on Neural Information Processing Systems, NeurIPS .</li>
+<li>Mohit Shridhar, Xingdi Yuan, Marc-Alexandre Cote, Yonatan Bisk, Adam Trischler, and Matthew Hausknecht. 2020. Alfworld: Aligning text and embodied environments for interactive learning. In Eighth International Conference on Learning Representations, ICLR .</li>
+<li>Jost Tobias Springenberg, Abbas Abdolmaleki, Jingwei Zhang, Oliver Groth, Michael Bloesch, Thomas Lampe, Philemon Brakel, Sarah Bechtle, Steven Kapturowski, Roland Hafner, et al. 2024. Offline actorcritic reinforcement learning scales to large models. In Proceedings of the Fourty-first International Conference on Machine Learning, ICML .</li>
+<li>James Thorne, Andreas Vlachos, Christos Christodoulopoulos, and Arpit Mittal. 2018. Fever: A large-scale dataset for fact extraction and</li>
+<li>verification. In 2018 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, NAACL HLT .</li>
+<li>Danqing Wang and Lei Li. 2023. Learning from mistakes via cooperative study assistant for large language models. In Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing, EMNLP .</li>
+<li>Ruoyao Wang, Peter Jansen, Marc-Alexandre Côté, and Prithviraj Ammanabrolu. 2022a. Scienceworld: Is your agent smarter than a 5th grader? In Proceedings of the 2022 Conference on Empirical Methods in Natural Language Processing, EMNLP .</li>
+<li>Xuezhi Wang, Jason Wei, Dale Schuurmans, Quoc V Le, Ed H Chi, Sharan Narang, Aakanksha Chowdhery, and Denny Zhou. 2022b. Self-consistency improves chain of thought reasoning in language models. In Eleventh International Conference on Learning Representations, ICLR .</li>
+<li>Zihao Wang, Shaofei Cai, Guanzhou Chen, Anji Liu, Xiaojian Ma, and Yitao Liang. 2023. Describe, explain, plan and select: interactive planning with llms enables open-world multi-task agents. In Thirtyseventh Conference on Neural Information Processing Systems, NeurIPS .</li>
+<li>Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Fei Xia, Ed Chi, Quoc V Le, Denny Zhou, et al. 2022. Chain-of-thought prompting elicits reasoning in large language models. In Thirty-sixth Conference on Neural Information Processing Systems, NeurIPS .</li>
+<li>Yue Wu, So Yeon Min, Yonatan Bisk, Ruslan Salakhutdinov, Amos Azaria, Yuanzhi Li, Tom Mitchell, and Shrimai Prabhumoye. 2023. Plan, eliminate, and track-language models are good teachers for embodied agents. arXiv preprint arXiv:2305.02412 .</li>
+<li>Zhilin Yang, Peng Qi, Saizheng Zhang, Yoshua Bengio, William Cohen, Ruslan Salakhutdinov, and Christopher D Manning. 2018. Hotpotqa: A dataset for diverse, explainable multi-hop question answering. In Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing, EMNLP .</li>
+<li>Zonghan Yang, Peng Li, Ming Yan, Ji Zhang, Fei Huang, and Yang Liu. 2024. React meets actre: When language agents enjoy training data autonomy. CoRR .</li>
+<li>Shunyu Yao, Howard Chen, John Yang, and Karthik Narasimhan. 2022a. Webshop: Towards scalable real-world web interaction with grounded language agents. In Thirty-fifth Conference on Neural Information Processing Systems, NeurIPS .</li>
+<li>Shunyu Yao, Dian Yu, Jeffrey Zhao, Izhak Shafran, Tom Griffiths, Yuan Cao, and Karthik Narasimhan. 2024. Tree of thoughts: Deliberate problem solving with large language models. In Thirty-seventh Conference on Neural Information Processing Systems, NeurIPS .</li>
+</ul>
+<p>1.0</p>
+<p>0.8 -</p>
+<p>0.6</p>
+<p>0.4</p>
+<p>0.2-</p>
+<p>0.0-</p>
+<p>20</p>
+<p>b=0, d=0</p>
+<p>b=0.25, d=0.95</p>
+<p>b=0.5, d=0.97</p>
+<p>b=0.6, d=0.97</p>
+<p>b=0.6, d=0.99</p>
+<p>Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik R Narasimhan, and Yuan Cao. 2022b. React: Synergizing reasoning and acting in language models. In Eleventh International Conference on Learning Representations, ICLR .</p>
+<p>Steps (t)</p>
+<p>Aohan Zeng, Mingdao Liu, Rui Lu, Bowen Wang, Xiao Liu, Yuxiao Dong, and Jie Tang. 2024. Agenttuning: Enabling generalized agent abilities for llms. In Findings of the Association for Computational Linguistics ACL .</p>
+<p>Danyang Zhang, Lu Chen, Situo Zhang, Hongshen Xu, Zihan Zhao, and Kai Yu. 2024. Large language models are semi-parametric reinforcement learning agents. Thirty-seventh Conference on Neural Information Processing Systems, ICLR .</p>
+<p>Andrew Zhao, Daniel Huang, Quentin Xu, Matthieu Lin, Yong-Jin Liu, and Gao Huang. 2024. Expel: Llm agents are experiential learners. In Proceedings of the AAAI Conference on Artificial Intelligence, AAAI .</p>
+<p>Denny Zhou, Nathanael Schärli, Le Hou, Jason Wei, Nathan Scales, Xuezhi Wang, Dale Schuurmans, Claire Cui, Olivier Bousquet, Quoc V Le, et al. 2022. Least-to-most prompting enables complex reasoning in large language models. In Eleventh International Conference on Learning Representations, ICLR .</p>
+<h2>A Supplementary Details for Dynamic Rescoring Method</h2>
+<p>Our method merges the probability of LLM and the Q value from the IQL together and selects the final action. For detail, the LLM first generates several responses by nuclear sampling. After mapping the responses into action space as aforementioned, LLM provides the probabilities p of these action candidates. We then normalize these values to obtain LLM scores. Here p means the probabilities of all actions given the current state.</p>
+<div class="formula-not-decoded">Formula not decoded</div>
+<p>The top-k actions are fed into the RL Critic. The value function will give the action value q for each action, which is then normalized as follows. Here q means the q values of all actions at the current state. When the q values are equal to each other, we give a score of 0.5 to all actions.</p>
+<div class="formula-not-decoded">Formula not decoded</div>
+<figure><figcaption><div class="caption">Figure 4: α ( t ) with different values of steps t</div></figcaption><img src="scratch/2024.emnlp-main.268-with-image-refs_artifacts/image_000003_8e32035b4ba8ed3441f81c3f38bbf622ee438697fe89a56759382abbac118f3b.png"></figure>
+<p>To decide which candidate will be chosen finally, we combine the 2 scores together as the final score S and select one with the highest score as follows:</p>
+<div class="formula-not-decoded">Formula not decoded</div>
+<div class="formula-not-decoded">Formula not decoded</div>
+<p>where α ( t ) is the dynamic combination weight between p and q which changes with different values of the step t . In the first step t = 0 , α ( t ) is 1 and the agent trusts the trained LLM completely. This is because when the trajectory is short with few observations from the environment, the LLM agent requires fewer experiences for decision. As the step t increases, α ( t ) will decline with a discount factor d , giving more chance for RL Critic to influence the decision making. However, we set the lower bound limit for α ( t ) to be b so the weight of p will not be too low. The effects of different settings for b and d are shown in Figure 4.</p>
+<h2>B Experimental Details</h2>
+<h2>B.1 Environment Details</h2>
+<p>Samples of the initial prompts for three environments are listed in the following. In general, each prompt contains an environment description and a task description. The prompt formats of ALFWorld and Webshop are derived from the AgentInstruct dataset (Zeng et al., 2024).</p>
+<h2>ScienceWorld Sample Task</h2>
+<p>Task Description Your task is to find the animal with the longest life span. The animals are in the 'outside' location. Focus on the animal with the longest life span.</p>
+<p>Status Time: 1; Score: 0;</p>
+<p>Action history: |look around (+0) -&gt; N/A |</p>
+<p>Current environment: This room is called the workshop. In it, you see: | the agent | a substance called air | a table. On the table are: a battery, a black wire, a orange light bulb, which is off, a orange wire, a red wire, a switch, which is off, a violet light bulb, which is off, a yellow light bulb, which is off. | a ultra low temperature freezer. The ultra low temperature freezer door is closed. | You also see: | A door to the hallway |</p>
+<p>Current inventory: In your inventory, you see: | an orange |</p>
+<p>Visited rooms:</p>
+<p>workshop</p>
+<p>Question:</p>
+<p>What action should you do next?</p>
+<h2>Webshop Sample Task</h2>
+<p>Environment Description You are web shopping. I will give you instructions about what to do. You have to follow the instructions. Every round I will give you an observation and a list of available actions, you have to respond an action based on the state and instruction. You can use search action if search is available. You can click one of the buttons in [clickables]. An action should be of the following structure:</p>
+<ul>
+<li style="list-style-type: '· ';">search[keywords]</li>
+<li style="list-style-type: '· ';">click[value]</li>
+</ul>
+<p>If the action is not valid, perform nothing. Keywords in search are up to you, but the value in click must be a value in the list of available actions. Remember that your keywords in search should be carefully designed. Your response should use the following format: Thought: I think ... Action:search/click[...]</p>
+<p>Task Description Find me machine wash men's dress shirts with cotton spandex, classic fit, short sleeve with color: black, and size: 5x-large tall, and price lower than 60.00 dollars [Search]</p>
+<h2>ALFWorld Sample Task</h2>
+<p>Environment Description Interact with a household to solve a task. Imagine you are an intelligent agent in a household environment and your target is to perform actions to complete the task goal. At the beginning of your interactions, you will be given the detailed description of the current environment and your goal to accomplish. For each of your turn, you will be given a list of actions which you can choose one to perform in this turn.</p>
+<p>Actions You should choose from two actions: 'THOUGHT' or 'ACTION'. If you choose 'THOUGHT,' you should first think about the current condition and plan for your future actions, and then output your action in this turn. Your output must strictly follow this format:</p>
+<ul>
+<li style="list-style-type: '• ';">THOUGHT: your thoughts.</li>
+</ul>
+<ul>
+<li style="list-style-type: '• ';">ACTION: your next action</li>
+</ul>
+<p>If you choose 'ACTION', you should directly output the action in this turn. Your output must strictly follow this format:</p>
+<ul>
+<li style="list-style-type: '· ';">ACTION: your next action.</li>
+</ul>
+<p>After your each turn, the environment will give you immediate feedback based on which you plan your next few steps. if the environment output "Nothing happened", that means the previous action is invalid and you should try more options.</p>
+<h2>Reminder:</h2>
+<ol>
+<li style="list-style-type: '1. ';">The action must be chosen from the given available actions. Any actions except provided available actions will be regarded as illegal.</li>
+<li style="list-style-type: '2. ';">Think when necessary, try to act directly more in the process.</li>
+</ol>
+<p>Initial Observation You are in the middle of a room. Looking quickly around you, you see a cabinet 16, a cabinet 15, a cabinet 14, a cabinet 13, a cabinet 12, a cabinet 11, a cabinet 10, a cabinet 9, a cabinet 8, a cabinet 7, a cabinet 6, a cabinet 5, a cabinet 4, a cabinet 3, a cabinet 2, a cabinet 1, a coffeemachine 1, a countertop 2, a countertop 1, a diningtable 1, a drawer 5, a drawer 4, a drawer 3, a drawer 2, a drawer 1, a fridge 1, a garbagecan 1, a microwave 1, a safe 1, a sinkbasin 1, a stoveburner 4, a stoveburner 3, a stoveburner 2, a stoveburner 1, and a toaster 1.</p>
+<p>Task Description Your task is to: put a clean spoon in diningtable.</p>
+<h2>B.2 ScienceWorld Experimental Details</h2>
+<p>Warm-up Stage Following the training approach outlined in (Lin et al., 2023), we enhance the traditional one-hop imitation learning data to multihop data by incorporating a sliding window that captures states and rewards from the previous 10</p>
+<p>actions (K = 10). Additionally, we introduce a dedicated field to track visited rooms, ensuring no duplication occurs. This approach provides agents with an extended context, thereby preventing redundant room navigation. The main idea is to exploit negative log-likelihood (NLL) loss to train the model to imitate the golden action.</p>
+<p>Our backbone model is Flan-T5-large, which is trained with a learning rate of 1e-4 and a batch size of 8. We terminate our model at step 8000. For efficient training, we also employ DeepSpeed Zero3 (Rajbhandari et al., 2021) for parallel training across four V100 GPUs.</p>
+<p>Retrospection Stage We collect trajectories by letting the IL-based LLM interact with the ScienceWorld environment. We then break down each trajectory into steps in the form of (task description, current state, action, next state) . More details regarding the collected trajectories and the proportion of the positive trajectories are provided in Table 1.</p>
+<p>For ScienceWorld, the Q-network IQL consists of 1 embedding layer, 5 GRU blocks, and 2 linear layers. The input for the Q-function includes task description, current state, and action. The state is divided into freelook and inventory, the two specific states in ScienceWorld. All these 5 parts (task, current state, action, freelook, and inventory) are passed through separate GPUs. We then concatenate the output of 5 GRU blocks before being fed into the last 2 linear layers. The V -network of IQL is similar to Q -network but doesn't need to input action. As a result, the input for V network does not include the action part.</p>
+<p>We set the size of the embedding layer to be 64, the output layer of GRU and the first linear layer to be 128. We train the IQL in 20 epochs with a batch size of 128. Due to the light parameter of GRU, the training process is around 2 hours, which is much less than 20h for the warm-up stage. The details of training parameters and training costs are listed in Table 9 and Table 10.</p>
+<p>DRRN In ScienceWorld, we separately train one online RL agent (DRRN) for each task of 30 tasks. For each task, the training step for DRRN is 10000, with a learning rate of 1 e -4 . The Q-network in DRRN is GRU+MLP with the embedding size of 128 and the hidden size of 128, which is consistent with ScienceWorld paper (Wang et al., 2022a).</p>
+<p>Extra Results Tabel 8 shows the detailed results for all 30 subtasks of ScienceWorld using different</p>
+<figure><figcaption><div class="caption">Figure 5: The structure of Twin-Q.</div></figcaption><img src="scratch/2024.emnlp-main.268-with-image-refs_artifacts/image_000004_4f6793c6a31c5e9f0fc214a27ef50d208c6c02caf9a615d0687959289732c5c0.png"></figure>
+<p>methods. As we can see, Retrospex achieves the highest score in most of the subtasks.</p>
+<h2>B.3 Webshop Experimental Details</h2>
+<p>Warm-up Stage Following the approach in (Zeng et al., 2024), we construct our training data by combining the AgentInstruct and ShareGPT datasets. The inclusion of ShareGPT helps prevent catastrophic forgetting, which could cause LLMs to lose their general capabilities. We refactor the AgentInstruct dataset so that each turn becomes an individual sample. For ShareGPT, we extract samples in a 20:80 ratio relative to AgentInstruct. This results in a training dataset of 13,000 samples from AgentInstruct and 52,000 samples from ShareGPT.</p>
+<p>Weselect the LLaMA3-8B-Instruct model as our backbone model. The training objective follows the approach outlined in (Zeng et al., 2024). We, however, employ LoRA for fine-tuning, with rank and alpha set to 32 and 64. During fine-tuning, we compute the loss based on the model's outputs using SFTTrainer 7 . We utilize a learning rate of 1e-4 and train for 2 epochs with a batch size of 2. To ensure an efficient training, we leverage DeepSpeed Zero-3 (Rajbhandari et al., 2021) for parallel training across four V100 GPUs.</p>
+<p>Retrospection Stage We collect trajectories on Webshop and perform preprocessing similar to that in ScienceWorld. More details are provided in Table 1. For Webshop, we treat the state as a whole part and use one GRU block for it, which is different from ScienceWorld. The Q-network we use is Twin Q (Clipped Double Q-learning) (Fujimoto</p>
+<p>7 https://huggingface.co/docs/trl/main/en/sft_trainer</p>
+<table><tbody><tr><th>task</th><th>average #steps</th><th>DRRN</th><th>ReAcT</th><th>SayCan</th><th>IL-T5</th><th>Retrospex</th></tr><tr><td>0</td><td>107.7(L)</td><td>0</td><td>0</td><td>33.06</td><td>29.89</td><td>14.33</td></tr><tr><td>1</td><td>75.2(L)</td><td>2</td><td>0</td><td>0.37</td><td>0</td><td>0</td></tr><tr><td>2</td><td>33.6(M)</td><td>0</td><td>0</td><td>47.81</td><td>29</td><td>25</td></tr><tr><td>3</td><td>15.1(S)</td><td>0</td><td>0</td><td>39.26</td><td>28.89</td><td>51.11</td></tr><tr><td>4</td><td>23(M)</td><td>6.5</td><td>38.8</td><td>19.72</td><td>44.78</td><td>40.44</td></tr><tr><td>5</td><td>14.6(S)</td><td>4.8</td><td>18</td><td>22.87</td><td>93.2</td><td>100</td></tr><tr><td>6</td><td>14.6(S)</td><td>5.7</td><td>17.6</td><td>31.43</td><td>93.2</td><td>100</td></tr><tr><td>7</td><td>8.8(S)</td><td>13</td><td>0</td><td>58.18</td><td>100</td><td>100</td></tr><tr><td>8</td><td>12.6(S)</td><td>10</td><td>8.6</td><td>20.87</td><td>96.6</td><td>98.3</td></tr><tr><td>9</td><td>88.9(L)</td><td>6</td><td>19.4</td><td>3.88</td><td>29.78</td><td>9.56</td></tr><tr><td>10</td><td>79.6(L)</td><td>10</td><td>9</td><td>13.93</td><td>33.8</td><td>28.7</td></tr><tr><td>11</td><td>69.5(L)</td><td>22.6</td><td>14.9</td><td>9.92</td><td>11.2</td><td>26.5</td></tr><tr><td>12</td><td>40(M)</td><td>17.8</td><td>10.1</td><td>20.91</td><td>24.8</td><td>26.6</td></tr><tr><td>13</td><td>16.3(S)</td><td>33.6</td><td>68.3</td><td>16</td><td>15</td><td>20.25</td></tr><tr><td>14</td><td>97(L)</td><td>18.5</td><td>11.6</td><td>21.94</td><td>34</td><td>39</td></tr><tr><td>15</td><td>84.9(L)</td><td>12.44</td><td>7.2</td><td>32.26</td><td>49.5</td><td>51.5</td></tr><tr><td>16</td><td>123.1(L)</td><td>7.3</td><td>5</td><td>13.67</td><td>28</td><td>54</td></tr><tr><td>17</td><td>7(S)</td><td>15.75</td><td>23</td><td>80</td><td>100</td><td>100</td></tr><tr><td>18</td><td>8(S)</td><td>26.67</td><td>16.67</td><td>50</td><td>100</td><td>100</td></tr><tr><td>19</td><td>7(S)</td><td>10.33</td><td>4.1</td><td>67.5</td><td>100</td><td>100</td></tr><tr><td>20</td><td>35.2(M)</td><td>18.17</td><td>50</td><td>8.03</td><td>11.1</td><td>65</td></tr><tr><td>21</td><td>65(L)</td><td>33</td><td>30</td><td>17.41</td><td>6.8</td><td>87.6</td></tr><tr><td>22</td><td>78.6(L)</td><td>50</td><td>42.5</td><td>10.39</td><td>40</td><td>28.22</td></tr><tr><td>23</td><td>130.1(L)</td><td>21</td><td>0.8</td><td>67.53</td><td>26.5</td><td>17.8</td></tr><tr><td>24</td><td>132.1(L)</td><td>20</td><td>8</td><td>59.45</td><td>17.2</td><td>25.9</td></tr><tr><td>25</td><td>13.6(S)</td><td>10</td><td>4</td><td>52.14</td><td>88.6</td><td>85.2</td></tr><tr><td>26</td><td>20.8(M)</td><td>10</td><td>13.5</td><td>22.5</td><td>62.4</td><td>58</td></tr><tr><td>27</td><td>25.6(M)</td><td>10</td><td>14.5</td><td>99.56</td><td>60.2</td><td>69.2</td></tr><tr><td>28</td><td>29(M)</td><td>16.9</td><td>1.9</td><td>47.76</td><td>77.8</td><td>76.1</td></tr><tr><td>29</td><td>21.4(M)</td><td>11.9</td><td>0.7</td><td>26.37</td><td>31.6</td><td>81.1</td></tr><tr><td>Average</td><td>-</td><td>14.13</td><td>14.6</td><td>33.82</td><td>48.80</td><td>55.98</td></tr></tbody></table>
+<p>Table 8: Overall experiment results on ScienceWorld. The result is the average of final scores in 100 steps per trajectory. The result of SayCan comes from (Lin et al., 2023).</p>
+<table><caption><div class="caption">Table 9: Training cost of warm-up stage and retrospection stage on 3 tasks.</div></caption><tbody><tr><th>Environment</th><th>Warm-up training cost</th><th>Retrospection training cost</th></tr><tr><td>SciWorld Webshop ALFWorld</td><td>4 32G V100s/ 20h 4 32G V100s/ 20h</td><td>15 rounds/ 1.5h 20 rounds/ &lt;0.5h 20 rounds/ &lt;0.5h</td></tr></tbody></table>
+<table><caption><div class="caption">Table 10: Training parameters on 3 tasks. The RL critic has a very small size of parameters, thus costing little additional time when doing training and inference.</div></caption><tbody><tr><th>Environment</th><th>LLM training parameters</th><th>IQL training parameters</th></tr><tr><td>SciWorld</td><td>Flan-T5-Large(770M)</td><td>GRU(2.7M)</td></tr><tr><td>Webshop</td><td>Llama3-8B-Instruct (Lora,1.5B)</td><td>GRU(2.2M)</td></tr><tr><td>Alfworld</td><td>Llama3-8B-Instruct (Lora,1.5B)</td><td>GRU(2.2M)</td></tr></tbody></table>
+<table><caption><div class="caption">Table 11: Results of Retrospex in Webshop (AgentLM test set) with IQL trained in different number of collected samples.</div></caption><tbody><tr><td>Samples</td><td>500</td><td>1000</td><td>1500</td><td>2000</td></tr><tr><td>AR</td><td>76.4</td><td>76.7</td><td>77.7</td><td>77.3</td></tr><tr><td>SR</td><td>0.475</td><td>0.475</td><td>0.505</td><td>0.485</td></tr></tbody></table>
+<p>et al., 2018), which uses 2 networks with the same structure and the last Q value is the minimum of these two networks. The structure of Twin Q is shown in Figure 5. The number of steps is comparatively small on Webshop, thus using Twin-Q can make the Q-network more stable. The other part of IQL is the same as that in ScienceWorld.</p>
+<p>We set the embedding size of the embedding layer to be 64, the output layer of GRU and the first linear layer to be 128. We train the IQL in 20 epochs with batch size 128. Due to the light parameter of GRU, the training process is around 2 hours. The details of training parameters and cost of warm-up and retrospection stage are listed in Table 9 and Table 10.</p>
+<p>Analysis on Collected Samples Table 11 shows the impact of the number of samples collected on RL training and the final performance on the Webshop environment. In order to discover the impact of the number of samples collected, we trained different IQLs with a number of samples collected from the Webshop environment ranging from 500 to 2000. We find that using 1500 samples can obtain better performance which means using 2000 samples may have resulted in the problem of overfitting. Due to this consideration, we believe that the training of lightweight IQL needs to be further investigated to achieve a balance between overfitting and underfitting.</p>
+<h2>B.4 ALFWorld Experimental Details</h2>
+<p>Warm-up Stage We train only one model for both ALWorld and Webshop. For detail training information, please refer to section B.3.</p>
+<p>Retrospection Stage We collect trajectories on ALFWorld and perform preprocessing in the same with ScienceWorld and Webshop. Details are also provided in Table 1. For ALFWorld, the training of IQL is identical to Webshop, where we use Twin-Q for Q-network.</p>
+<table><caption><div class="caption">Table 12: Overall results on ALFWorld. The result of the A 3 T is from paper (Yang et al., 2024).</div></caption><tbody><tr><th>Method</th><th>LLM</th><th>SR</th></tr><tr><td>A 3 T (round=0)</td><td>Mistral-7B-Instruct</td><td>86.0</td></tr><tr><td>A 3 T (round=1)</td><td>Mistral-7B-Instruct</td><td>94.0</td></tr><tr><td>A 3 T (round=2)</td><td>Mistral-7B-Instruct</td><td>96.0</td></tr><tr><td>A 3 T (round=3)</td><td>Mistral-7B-Instruct</td><td>95.0</td></tr><tr><td>FT-LLaMA3</td><td>LLaMA3-8B-Instruct</td><td>83.5</td></tr><tr><td>Retrospex</td><td>LLaMA3-8B-Instruct</td><td>87.0</td></tr></tbody></table>
+<table><caption><div class="caption">Table 13: Overall results on Webshop, Agentboard Testset. The result of the A 3 T is from A 3 T paper (Yang et al., 2024).</div></caption><tbody><tr><th>Method</th><th>LLM</th><th>AS</th></tr><tr><td>A 3 T (round=0)</td><td>Mistral 7B</td><td>72.0</td></tr><tr><td>A 3 T (round=1)</td><td>Mistral 7B</td><td>73.5</td></tr><tr><td>A 3 T (round=2)</td><td>Mistral 7B</td><td>72.3</td></tr><tr><td>A 3 T (round=3)</td><td>Mistral 7B</td><td>72.9</td></tr><tr><td>Retrospex</td><td>LLaMA3 8B</td><td>77.2</td></tr></tbody></table>
+<h2>B.5 More Comparison with A 3 T</h2>
+<p>We conduct a detailed comparison with A 3 T on Webshop and ALFWorld. The results are shown in Table 12 and 13. In both environments, Retrospex outperforms the result of A 3 T at round = 0 . Because A 3 T continues to increase the training trajectories and trains the LLM at each round, it works better in round = 1 , 2 , 3 in the ALFWorld environment. However, compared to the expensive training investment of A 3 T , Retrospex still has advantages. On Webshop, Retrospex outperformed all A 3 T rounds in 251 test cases of AgentBoard.</p>
+<h2>B.6 More Analysis</h2>
+<p>Table 14 shows the role of action mapping in Retrospex in ScienceWorld and ALFWorld. Here, Retrospex (w/o retrospection) correspond to IL-T5 in Sci-</p>
+<table><caption><div class="caption">Table 14: Results of our ablation study.</div></caption><tbody><tr><th>Env</th><th>Methods</th><th>AS</th><th>SR</th></tr><tr><th>SciWorld</th><th>Retrospex</th><td>55.98</td><td>36.0</td></tr><tr><td></td><th>w/o retrospection</th><td>48.80</td><td>27.0</td></tr><tr><td></td><th>w/o act mapping</th><td>55.25</td><td>34.3</td></tr><tr><th>ALFWorld</th><th>Retrospex</th><td>-</td><td>87.0</td></tr><tr><td></td><th>w/o retrospection</th><td>-</td><td>83.5</td></tr><tr><td></td><th>w/o act mapping</th><td>-</td><td>85.1</td></tr></tbody></table>
+<p>enceWorld and IL-LLaMA3 in ALFWorld, which we put here for cross-reference. As expected, removing action mapping leads to a performance decline in Retrospex, consistent with previous findings (Brohan et al., 2022). However, the drop is relatively modest, suggesting that action mapping is not the only key factor for Retrospex in these environments. One possible explanation is that imitation learning during the warm-up phase helps the LLM partially adapt to the target environment, reducing the occurrence of invalid actions.</p>
+</div>
+</body>
+</html>

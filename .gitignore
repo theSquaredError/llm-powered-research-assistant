@@ -2,3 +2,5 @@ renv/
 .env
 test.py
 personal_doc.md
+.newenv/
+.vscode/

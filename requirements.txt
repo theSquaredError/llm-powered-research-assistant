@@ -8,3 +8,4 @@ faiss-cpu
 PyMuPDF  # for PDF ingestion
 python-dotenv
 pypdf
+streamlit-extras

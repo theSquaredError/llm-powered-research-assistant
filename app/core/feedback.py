@@ -29,4 +29,4 @@ def store_feedback(payload):
         with open(FEEDBACK_LOG, 'w', encoding='utf-8') as f:
             json.dump([feedback_entry], f, indent=2)
 
-    print(f"[✔] Feedback stored at {feedback_entry['timestamp']}")
+    print(f"Feedback stored at {feedback_entry['timestamp']}")
