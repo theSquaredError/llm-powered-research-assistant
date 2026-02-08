@@ -1,6 +1,6 @@
 # LLM-Powered-Research-Assistant
 
-A production-grade backend system that answers research questions using a combination of Retrieval-Augmented Generation (RAG), vector similarity search (FAISS), and a HuggingFace transformer-based question answering model. Feedback from users can be collected and used to fine-tune the model via Direct Preference Optimization (DPO).
+A production-grade backend system that answers research questions using a combination of Retrieval-Augmented Generation (RAG), vector similarity search (Qdrant), and a HuggingFace transformer-based question answering model. Feedback from users can be collected and used to fine-tune the model via Direct Preference Optimization (DPO).
 
 ---
 ## Features
