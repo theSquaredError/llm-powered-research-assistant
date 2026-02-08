@@ -4,8 +4,11 @@ from pathlib import Path
 from typing import List, Any
 import tempfile
 import os
+from io import BytesIO
 import uuid
 from sentence_transformers import SentenceTransformer
+import requests
+
 
 from docling_core.types.doc import ImageRefMode, PictureItem, TableItem
 
@@ -15,8 +18,6 @@ from docling.document_converter import DocumentConverter, PdfFormatOption
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import VectorParams, Distance, PointStruct
-
-# from langchain_core.documents import Document
 
 _log = logging.getLogger(__name__)
 
@@ -32,25 +33,99 @@ class DocumentProcessor:
         self.pipeline_options.do_ocr = True
         self.pipeline_options.do_table_structure = True
         self.pipeline_options.generate_picture_images = True
-        self.pipeline_options.images_scale = 2.0
-    
-    def process_uploaded_files(self, uploaded_files) -> tuple[List[Document], List[Any]]:
+        self.pipeline_options.images_scale = IMAGE_RESOLUTION_SCALE
+        
+        # Initialize converter once in __init__
+        self.converter = DocumentConverter(
+            format_options={
+                InputFormat.PDF: PdfFormatOption(pipeline_options=self.pipeline_options)
+            }
+        )
+
+    def process_pdf(self, file_bytes: BytesIO, filename:str) -> dict:
+        temp_dir = tempfile.mkdtemp()
+        try:
+            temp_file_path = os.path.join(temp_dir, filename)
+            with open(temp_file_path, "wb") as f:
+                f.write(file_bytes.getvalue())
+
+            result = self.converter.convert(temp_file_path)
+            markdown_content = result.document.export_to_markdown()
+
+            return {
+                'markdown': markdown_content,
+                'doc': result.document,
+                'filename': filename
+            }
+        
+        except Exception as e:
+            _log.error(f"Error processing PDF {filename}: {str(e)}")
+            raise
+        finally:
+            try:
+                import shutil
+                shutil.rmtree(temp_dir)
+            except Exception as e:
+                _log.warning(f"Could not clean up temp directory: {str(e)}")
+
+    def process_urls(self, urls):
+        markdown_results = ""
+        docs = []
+
+        for url in urls:
+            try:
+                response = requests.get(url, timeout = 30)
+                response.raise_for_status()
+
+                filename = url.split('/')[-1] or "document"
+
+                if url.lower().endswith('.pdf') or 'application/pdf' in response.headers.get('content-type', ''):
+                    file_bytes = BytesIO(response.content)
+                    doc = self.process_pdf(file_bytes, filename)
+                    markdown_results +=f"\n\n## {filename}\n{doc['markdown']}"
+                    docs.append({
+                        'markdown':doc['markdown'],
+                        'doc':doc['doc'],
+                        'filename':filename
+                    })
+                    _log.info(f"successfully processed PDF from URI: {url}")
+                
+                else:
+                    _log.warning(f"unsupported file type for URL: {url}")
+                
+            except requests.exceptions.Timeout:
+                error_msg = f"Timeout downloading {url}"
+                _log.error(error_msg)
+                markdown_results += f"\n\n**Error:** {error_msg}"
+            except requests.exceptions.ConnectionError as e:
+                error_msg = f"Connection error downloading {url}: {str(e)}"
+                _log.error(error_msg)
+                markdown_results += f"\n\n**Error:** {error_msg}"
+            except Exception as e:
+                error_msg = f"Error processing URL {url}: {str(e)}"
+                _log.error(error_msg)
+                markdown_results += f"\n\n**Error:** {error_msg}"
+        
+        return markdown_results, docs
+
+
+    def process_uploaded_files(self, uploaded_files) -> tuple[str, List[Any], List[Any]]:
         """
-        Process uploaded files and convert them to LangChain Document objects.
+        Process uploaded files and convert them to markdown and Docling documents.
 
         Args:
             uploaded_files: List of Streamlit UploadedFile objects
 
         Returns:
-            Tuple of (LangChain Documents, Docling Documents)
+            Tuple of (markdown_content, docling_documents, metadata)
         """
-        documents = []
+        markdown_contents = []
         docling_docs = []
         temp_dir = tempfile.mkdtemp()
 
         try:
             for uploaded_file in uploaded_files:
-                print(f"Processing {uploaded_file.name}...")
+                _log.info(f"Processing {uploaded_file.name}...")
 
                 # Save uploaded file to temporary location
                 temp_file_path = os.path.join(temp_dir, uploaded_file.name)
@@ -63,149 +138,174 @@ class DocumentProcessor:
 
                     # Export to markdown
                     markdown_content = result.document.export_to_markdown()
+                    markdown_contents.append(markdown_content)
 
-                    # Create LangChain document
-                    # doc = Document(
-                    #     page_content=markdown_content,
-                    #     metadata={
-                    #         "filename": uploaded_file.name,
-                    #         "file_type": uploaded_file.type,
-                    #         "source": uploaded_file.name,
-                    #     },
-                    # )
-                    # documents.append(doc)
-                    doc_converter = DocumentConverter(
-                        format_options = {
-                            InputFormat.PDF: PdfFormatOption(pipeline_options=self.pipeline_options)
-                        }
-                    )
-
-                    # Store the Docling document for structure visualization
+                    # Store the Docling document for structure and indexing
                     docling_docs.append({
                         'filename': uploaded_file.name,
-                        'doc': result.document
+                        'doc': result.document,
+                        'markdown': markdown_content
                     })
 
-                    print(f"Successfully processed {uploaded_file.name}")
+                    _log.info(f"Successfully processed {uploaded_file.name}")
 
                 except Exception as e:
-                    print(f"Error processing {uploaded_file.name}: {str(e)}")
+                    _log.error(f"Error processing {uploaded_file.name}: {str(e)}")
                     continue
 
         finally:
             # Clean up temporary files
             try:
                 import shutil
-
                 shutil.rmtree(temp_dir)
             except Exception as e:
-                print(f"Warning: Could not clean up temp directory: {str(e)}")
+                _log.warning(f"Could not clean up temp directory: {str(e)}")
 
-        print(f"Processed {len(documents)} documents successfully")
-        return markdown_content, documents, docling_docs
+        _log.info(f"Processed {len(docling_docs)} documents successfully")
+        return "\n".join(markdown_contents), docling_docs
 
-
-def chunk_text(text, chunk_size=800):
-    words = text.split()
-    chunks = []
-    for i in range(0, len(words), chunk_size):
-        chunks.append(" ".join(words[i:i+chunk_size]))
-    
-    return chunks
-
-
-# Insert text chunks
-points = []
 
 class QdrantIndexer:
-    def __init__(self, collection_name:str, host="localhost", port=6333):
+    def __init__(self, collection_name: str, host="localhost", port=6333):
         self.collection_name = collection_name
-        self.client = QdrantClient(host=host, port = port)
+        self.client = QdrantClient(host=host, port=port)
         self.embedder = SentenceTransformer(EMBEDDING_MODEL)
         self.emb_dim = self.embedder.get_sentence_embedding_dimension()
         
-        # create collection if not exists
+        # Create collection if not exists
         if not self.client.collection_exists(collection_name):
             self.client.create_collection(
                 collection_name=collection_name,
                 vectors_config=VectorParams(
-                    size= self.emd_dim,
+                    size=self.emb_dim,
                     distance=Distance.COSINE
-
                 )
             )
+            _log.info(f"Created collection: {collection_name}")
+    def clear_collection(self):
+        """Delete and recreate the collection to remove old data"""
 
-        # Text chunking
+        try:
+            self.client.delete_collection(collection_name=self.collection_name)
+            _log.info(f"Cleared collection: {self.collection_name}")
+        except Exception as e:
+            _log.warning(f"Could not delete collection: {str(e)}")
+
+        
+        # recreate empty collection
+
+        self.client.create_collection(
+            collection_name=self.collection_name,
+            vectors_config=VectorParams(
+                size=self.emb_dim,
+                distance=Distance.COSINE
+            )
+        )
+        _log.info(f"Recreated collection: {self.collection_name}")
 
     def chunk_text(self, text, chunk_size=800):
+        """Split text into chunks by word count"""
         words = text.split()
         return [
             " ".join(words[i:i+chunk_size])
             for i in range(0, len(words), chunk_size)
         ]
     
-    # main indexing function
-    def index_document(self, markdown_text:str, doc_obj=None, source_name="document"):
+    def index_document(self, markdown_text: str, doc_obj=None, source_name="document"):
+        """Index document: text chunks, figures, and tables"""
         points = []
 
         # Index text chunks
-
         chunks = self.chunk_text(markdown_text)
-        for chunk in chunks:
+        for idx, chunk in enumerate(chunks):
             vec = self.embedder.encode(chunk).tolist()
             points.append(
                 PointStruct(
-                    id = str(uuid.uuid4()),
+                    id=int(uuid.uuid4().int % (2**32)),
                     vector=vec,
                     payload={
-                        "type":"text",
+                        "type": "text",
                         "content": chunk,
-                        "source_name": source_name
+                        "source_name": source_name,
+                        "chunk_idx": idx
                     }
                 )
             )
 
         # Index figures if provided
-
-        if doc_obj:
-            for fig in doc_obj.figures:
-                vec = self.embedder.encode(fig.caption).tolist()
-                points.append(
-                    PointStruct(
-                        id = str(uuid.uuid4()),
-                        vector=vec,
-                        payload={
-                            "type":"figure",
-                            "content":fig.caption,
-                            "page":fig.page,
-                            "source":source_name
-                        }
+        if doc_obj and hasattr(doc_obj, 'pictures'):
+            for idx, fig in enumerate(doc_obj.pictures):
+                if hasattr(fig, 'caption') and fig.caption:
+                    vec = self.embedder.encode(fig.caption).tolist()
+                    points.append(
+                        PointStruct(
+                            id=int(uuid.uuid4().int % (2**32)),
+                            vector=vec,
+                            payload={
+                                "type": "figure",
+                                "content": fig.caption,
+                                "page": getattr(fig, 'page_no', 0),
+                                "source": source_name,
+                                "figure_idx": idx
+                            }
+                        )
                     )
-                )
 
         # Index tables
-        for table in doc_obj.tables:
-            vec = self.embedder.encode(table.caption).tolist()
-            points.append(
-                PointStruct(
-                    id=str(uuid.uuid4()),
-                    vector=vec,
-                    payload={
-                        "type":"table",
-                        "content":table.caption,
-                        "page":table.page,
-                        "source":source_name
-                    }
-                )
+        if doc_obj and hasattr(doc_obj, 'tables'):
+            for idx, table in enumerate(doc_obj.tables):
+                if hasattr(table, 'caption') and table.caption:
+                    vec = self.embedder.encode(table.caption).tolist()
+                    points.append(
+                        PointStruct(
+                            id=int(uuid.uuid4().int % (2**32)),
+                            vector=vec,
+                            payload={
+                                "type": "table",
+                                "content": table.caption,
+                                "page": getattr(table, 'page_no', 0),
+                                "source": source_name,
+                                "table_idx": idx
+                            }
+                        )
+                    )
+
+        # Bulk insert into Qdrant
+        if points:
+            self.client.upsert(
+                collection_name=self.collection_name,
+                points=points
+            )
+            _log.info(f"Indexed {len(points)} elements from {source_name}")
+        
+        return len(points)
+
+    def retrieve(self, query: str, limit: int = 5, filter_type: str = None) -> List[dict]:
+        """Retrieve relevant documents based on semantic similarity"""
+        query_vec = self.embedder.encode(query).tolist()
+
+        try:
+            # Use query_points (available in your qdrant-client version)
+            results = self.client.query_points(
+                collection_name=self.collection_name,
+                query=query_vec,
+                limit=limit,
+                with_payload=True
             )
 
-        # Bulk insert
+            # Normalize results
+            retrieved = []
+            for r in results.points:
+                retrieved.append({
+                    "id": r.id,
+                    "payload": r.payload or {},
+                    "score": r.score
+                })
+            return retrieved
 
-        self.client.upsert(
-            collection_name=self.collection_name,
-            points=points
-        )
-        return len(points)
+        except Exception as e:
+            _log.error(f"Error during retrieve: {e}")
+            return []
 
 
 def main():
@@ -215,9 +315,6 @@ def main():
     input_doc_path = data_folder / "arxiv_papers/2024.emnlp-main.268.pdf"
     output_dir = Path("scratch")
 
-    # Keep page/element images so they can be exported. The `images_scale` controls
-    # the rendered image resolution (scale=1 ~ 72 DPI). The `generate_*` toggles
-    # decide which elements are enriched with images.
     pipeline_options = PdfPipelineOptions()
     pipeline_options.images_scale = IMAGE_RESOLUTION_SCALE
     pipeline_options.generate_page_images = True
@@ -240,7 +337,6 @@ def main():
 
     # Save page images
     for page_no, page in conv_res.document.pages.items():
-        page_no = page.page_no
         page_image_filename = output_dir / f"{doc_filename}-{page_no}.png"
         with page_image_filename.open("wb") as fp:
             page.image.pil_image.save(fp, format="PNG")
@@ -265,15 +361,13 @@ def main():
             with element_image_filename.open("wb") as fp:
                 element.get_image(conv_res.document).save(fp, "PNG")
 
-    # Save markdown with embedded pictures
+    # Save markdown variants
     md_filename = output_dir / f"{doc_filename}-with-images.md"
     conv_res.document.save_as_markdown(md_filename, image_mode=ImageRefMode.EMBEDDED)
 
-    # Save markdown with externally referenced pictures
     md_filename = output_dir / f"{doc_filename}-with-image-refs.md"
     conv_res.document.save_as_markdown(md_filename, image_mode=ImageRefMode.REFERENCED)
 
-    # Save HTML with externally referenced pictures
     html_filename = output_dir / f"{doc_filename}-with-image-refs.html"
     conv_res.document.save_as_html(html_filename, image_mode=ImageRefMode.REFERENCED)
 

@@ -1,17 +1,57 @@
+import sys
+from pathlib import Path
+project_root = Path(__file__).parent.parent.resolve()
+sys.path.insert(0, str(project_root))
 import os
 import streamlit as st
 import pandas as pd
+from pathlib import Path
+import sys
 from streamlit_extras.bottom_container import bottom
 import requests
+from scripts.ingest3 import DocumentProcessor, QdrantIndexer
 # load_dotenv()
 
 API_URL = "http://localhost:8000/api/ask"
 FEEDBACK_URL = "http://localhost:8000/api/feedback"
 st.set_page_config(
-    page_title="Research Assistant",
+    page_title = "Research Assistant",
     layout="wide"
 )
 st.title("Research Assistant")
+
+def process_and_index():
+    processor = DocumentProcessor()
+    indexer = QdrantIndexer(collection_name="papers")
+    
+    # clear old data before indexing new documents
+    indexer.clear_collection()
+
+    full_markdown = ""
+    docs_to_index = []
+
+    # Process uploaded files
+    if st.session_state.uploaded_files:
+        md, docs = processor.process_uploaded_files(st.session_state.uploaded_files)
+        full_markdown += md + "\n"
+        docs_to_index.extend(docs)
+
+    # Process URLs
+    if st.session_state.get("file_urls"):
+        md, docs = processor.process_urls(st.session_state.file_urls)
+        full_markdown += md + "\n"
+        docs_to_index.extend(docs)
+
+    for doc in docs_to_index:
+        indexer.index_document(
+            markdown_text=doc['markdown'],
+            doc_obj=doc['doc'],
+            source_name=doc['filename']
+        )
+    
+    return full_markdown, indexer
+
+
 def stream_response_from_api(query:str):
     """
     Generator that streams tokens from the FASTAPI backend
@@ -43,10 +83,12 @@ def stream_response_from_api(query:str):
 def initialise_session_state():
     if "uploaded_files" not in st.session_state:
         st.session_state.uploaded_files = []
+    if "file_urls" not in st.session_state:
+        st.session_state.file_urls = []
     if  "vectorstore" not in st.session_state:
         st.session_state.vectorstore = None
     if "agent" not in st.session_state:
-        st.session_state.agent = []
+        st.session_state.agent = None
     if "messages" not in st.session_state:
         st.session_state.messages = []
     if "processing_status" not in st.session_state:
@@ -58,8 +100,28 @@ def render_sidebar():
     """Render the sidebar with setup controls"""
 
     with st.sidebar:
-        st.title("Setup")
+        st.title("Research Assistant")
+        # new chat / clear history button
+        col1, col2  = st.columns(2)
+        with col1:
+            if st.button(" New chat", use_container_width=True):
+                st.session_state.messages = []
+                st.success("Chat cleared!")
+                st.rerun()
 
+        with col2:
+            if st.button("Delete All", use_container_width=True):
+                st.session_state.messages = []
+                st.session_state.uploaded_files = []
+                st.session_state.file_urls = []
+                st.session_state.vectorstore = None
+                st.session_state.agent = None
+                st.session_state.processing_status = "not_started"
+                st.info("All data cleared!")
+                st.rerun()
+
+        st.divider()
+        st.title("setup")
         # file uploader
         uploaded_files = st.file_uploader(
             "Upload Document",
@@ -75,11 +137,29 @@ def render_sidebar():
             with st.expander("Uploade Files"):
                 for file in uploaded_files:
                     st.write(f"- {file.name} ({file.type})")
+        
+        # URL Input
+        url_input = st.text_area("Or provide URLs (one per line)", height=100, 
+                                 help="Enter URLs of documents to process")
+
+        # Process button
+        if st.button("Process & Index", use_container_width=True):
+            st.session_state.uploaded_files = uploaded_files
+            st.session_state.file_urls = [url.strip() for url in url_input.split('\n') if url.strip()]
             
-            # Process button
-            if st.button("Process & Index", use_container_width=True):
-                st.session_state.uploaded_files = uploaded_files
-                # process_and_index(uploaded_files)     #TODO: complete this functioin to process the uploaded document
+            if st.session_state.uploaded_files or st.session_state.file_urls:
+                st.session_state.processing_status = "processing"
+                with st.spinner("Processing documents..."):
+                    try:
+                        markdown, indexer = process_and_index()
+                        st.session_state.vectorstore = indexer
+                        st.session_state.processing_status = "completed"
+                        st.session_state.agent = "Ready"
+                    except Exception as e:
+                        st.error(f"Error: {e}")
+                        st.session_state.processing_status = "error"
+            else:
+                st.warning("Please upload files or provide URLs.")
             
         
         # Status indicator
@@ -109,12 +189,12 @@ def render_sidebar():
             - Start with a few documents for testing
             - Documents are processed with OCR for scanned content
             - Tables and structures are preserved
-
-            **For production:**
-            - Add persistent vector storage
-            - Implement GPU acceleration for faster processing
-            - Add authentication and access controls
             """
+            # **For production:**
+            # - Add persistent vector storage
+            # - Implement GPU acceleration for faster processing
+            # - Add authentication and access controls
+
             )
 
 def render_chat():
@@ -151,7 +231,7 @@ def render_chat():
     if prompt:
         # add user message
         st.session_state.messages.append({"role":"user","content":prompt})
-        with st.chat_input("user"):
+        with st.chat_message("user"):
             st.markdown(prompt)
 
         # get agent response

@@ -2,27 +2,44 @@ import faiss
 import json
 import numpy as np
 from sentence_transformers import SentenceTransformer
-
-INDEX_PATH = 'data/faiss_index.index'
-DOCSTORE_PATH = 'data/docstore.json'
+from qdrant_client import QdrantClient
+import os
+# INDEX_PATH = 'data/faiss_index.index'
+# DOCSTORE_PATH = 'data/docstore.json'
 EMBEDDING_MODEL = 'sentence-transformers/all-MiniLM-L6-v2'
+QDRANT_HOST = os.getenv('QDRANT_HOST', 'localhost')
+QDRANT_PORT = int(os.getenv('QDRANT_PORT', '6333'))
+COLLECTION_NAME = "papers"
 
 class Retriever:
     def __init__(self, top_k=5):
-        self.index = faiss.read_index(INDEX_PATH)
+        self.client = QdrantClient(host=QDRANT_HOST, port = QDRANT_PORT)
         self.model = SentenceTransformer(EMBEDDING_MODEL)
-        with open(DOCSTORE_PATH, 'r', encoding='utf-8') as f:
-            self.docstore = json.load(f)
         self.top_k = top_k
+        self.collection_name = COLLECTION_NAME
 
     def retrieve(self, query):
-        query_embedding = self.model.encode([query], convert_to_numpy=True)
-        distances, indices = self.index.search(query_embedding, self.top_k)
-        results = []
-        for idx in indices[0]:
-            if idx < len(self.docstore):
-                results.append(self.docstore[idx]["text"])
-        return "\n".join(results)
+        """Retrieve relevant chunks from Qdrant"""
+
+        query_vec = self.model.encode(query).tolist()
+
+        try:
+            results = self.client.query_points(
+                collection_name=self.collection_name,
+                query=query_vec,
+                limit=self.top_k,
+                with_payload=True
+            )
+
+            # extract contents from results
+            chunks = []
+            for result in results.points:
+                if result.payload:
+                    chunks.append(result.payload.get('content', ''))
+            return "\n".join(chunks)
+        
+        except Exception as e:
+            print(f"[ERROR] Qdrant retrieval failed: {e}")
 
 retriever_instance = Retriever()
 

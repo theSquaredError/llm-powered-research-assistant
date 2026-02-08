@@ -5,16 +5,18 @@ A production-grade backend system that answers research questions using a combin
 ---
 ## Features
 - For inferencing I am using Ollama with a quantized Llama3 model
-- Semantic search over research papers using embeddings + FAISS
+- Semantic search over research papers using embeddings + Qdrant
 - LLM-based answer generation with grounding
 - User feedback collection for training preference pairs
 <!-- - Supports DPO fine-tuning pipeline (HuggingFace TRL) -->
 - FastAPI backend with modular architecture
 <!-- - 📦 Containerized with Docker for deployment -->
 ---
+## Current Challenges:
+- Context generated is still not optimal
+- Need to improve how data is stored in indexed
 
 ## 📌 Project Navigation
-
 This project is being built in public. Alongside the codebase, I maintain open documentation of design decisions, ongoing challenges, and planned improvements.
 
 **Explore the project:**
@@ -35,6 +37,8 @@ This project is being built in public. Alongside the codebase, I maintain open d
   → [GitHub Issues](../../issues) -->
 
 ---
+## Working demo 
+![demo](assets/images/demo.png)
 
 ## 📁 Project Structure
 ```bash
@@ -111,7 +115,7 @@ streamlit run frontend/app.py
 ## Model & Tools
 - LLM: distilbert-base-cased-distilled-squad (default, replaceable)
 - Embedding: sentence-transformers (e.g. all-MiniLM-L6-v2)
-- VectorDB: FAISS
+- VectorDB: Qdrant
 - Fine-tuning: HuggingFace TRL (DPO)
 
 ---
