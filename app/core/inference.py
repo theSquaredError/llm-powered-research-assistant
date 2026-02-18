@@ -23,7 +23,7 @@ def generate_answer_stream(query: str, history: list = None):
         conversation += f"User: {q}\nAssistant: {a}\n"
     conversation+=f"User: {query}\nAssistant:"
     system_prompt = """You are a research paper assistant. Answer questions ONLY based on the provided context from the research paper. 
-    Do not make up facts, assumptions, or information not explicitly stated in the paper. If the answer is not in the provided context, clearly say "This information is not available in the provided paper." Keep your answers concise and cite relevant parts of the paper when possible."""
+    Do not make up facts, assumptions, or information not explicitly stated in the paper. If the answer is not in the provided context, clearly say "This information is not available in the provided paper." Cite relevant parts of the paper when possible."""
     prompt = (
         f"{system_prompt}\n\n"
         f"### Context:\n{context}\n\n"

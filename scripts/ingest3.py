@@ -15,7 +15,10 @@ from docling_core.types.doc import ImageRefMode, PictureItem, TableItem
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
-
+from docling_core.transforms.chunker import HierarchicalChunker
+from docling_core.transforms.chunker.hybrid_chunker import HybridChunker
+from docling_core.transforms.chunker.tokenizer.base import BaseTokenizer
+from docling_core.transforms.chunker.tokenizer.huggingface import HuggingFaceTokenizer
 from qdrant_client import QdrantClient
 from qdrant_client.models import VectorParams, Distance, PointStruct
 
@@ -41,7 +44,8 @@ class DocumentProcessor:
                 InputFormat.PDF: PdfFormatOption(pipeline_options=self.pipeline_options)
             }
         )
-
+        
+        
     def process_pdf(self, file_bytes: BytesIO, filename:str) -> dict:
         temp_dir = tempfile.mkdtemp()
         try:
@@ -182,6 +186,7 @@ class QdrantIndexer:
                 )
             )
             _log.info(f"Created collection: {collection_name}")
+    
     def clear_collection(self):
         """Delete and recreate the collection to remove old data"""
 
@@ -203,83 +208,53 @@ class QdrantIndexer:
         )
         _log.info(f"Recreated collection: {self.collection_name}")
 
-    def chunk_text(self, text, chunk_size=800):
-        """Split text into chunks by word count"""
-        words = text.split()
-        return [
-            " ".join(words[i:i+chunk_size])
-            for i in range(0, len(words), chunk_size)
-        ]
-    
-    def index_document(self, markdown_text: str, doc_obj=None, source_name="document"):
-        """Index document: text chunks, figures, and tables"""
-        points = []
 
-        # Index text chunks
-        chunks = self.chunk_text(markdown_text)
-        for idx, chunk in enumerate(chunks):
-            vec = self.embedder.encode(chunk).tolist()
+    def index_document(self, doc_obj, source_name="document"):
+        """
+        Index a Docling using HierarchicalChunker
+        """
+        points = []
+        chunker = HierarchicalChunker(
+            max_tokens = 500,
+            overlap = 50
+        )
+        chunks = list(chunker.chunk(doc_obj))
+    
+        for chunk in chunks:
+            text = chunk.text.strip()
+
+            # skip very small chunks
+            if len(text) < 200:
+                continue
+
+            section_path = chunk.meta.headings or []
+            enriched_text = " > ".join(section_path) + "\n\n" + text
+            vector = self.embedder.encode(enriched_text).tolist()
+
+            payload = {
+                "type": "text",
+                "content": text,
+                "section_path": section_path,
+                "source_name": source_name
+            }
+
             points.append(
                 PointStruct(
-                    id=int(uuid.uuid4().int % (2**32)),
-                    vector=vec,
-                    payload={
-                        "type": "text",
-                        "content": chunk,
-                        "source_name": source_name,
-                        "chunk_idx": idx
-                    }
+                    id = int(uuid.uuid4().int % (2**32)),
+                    vector = vector,
+                    payload=payload
                 )
             )
 
-        # Index figures if provided
-        if doc_obj and hasattr(doc_obj, 'pictures'):
-            for idx, fig in enumerate(doc_obj.pictures):
-                if hasattr(fig, 'caption') and fig.caption:
-                    vec = self.embedder.encode(fig.caption).tolist()
-                    points.append(
-                        PointStruct(
-                            id=int(uuid.uuid4().int % (2**32)),
-                            vector=vec,
-                            payload={
-                                "type": "figure",
-                                "content": fig.caption,
-                                "page": getattr(fig, 'page_no', 0),
-                                "source": source_name,
-                                "figure_idx": idx
-                            }
-                        )
-                    )
-
-        # Index tables
-        if doc_obj and hasattr(doc_obj, 'tables'):
-            for idx, table in enumerate(doc_obj.tables):
-                if hasattr(table, 'caption') and table.caption:
-                    vec = self.embedder.encode(table.caption).tolist()
-                    points.append(
-                        PointStruct(
-                            id=int(uuid.uuid4().int % (2**32)),
-                            vector=vec,
-                            payload={
-                                "type": "table",
-                                "content": table.caption,
-                                "page": getattr(table, 'page_no', 0),
-                                "source": source_name,
-                                "table_idx": idx
-                            }
-                        )
-                    )
-
-        # Bulk insert into Qdrant
         if points:
             self.client.upsert(
                 collection_name=self.collection_name,
-                points=points
+                points = points
             )
-            _log.info(f"Indexed {len(points)} elements from {source_name}")
-        
+            _log.info(f"Indexed {len(points)} chunks from {source_name}")
+            
         return len(points)
-
+        
     def retrieve(self, query: str, limit: int = 5, filter_type: str = None) -> List[dict]:
         """Retrieve relevant documents based on semantic similarity"""
         query_vec = self.embedder.encode(query).tolist()

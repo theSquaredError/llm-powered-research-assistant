@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+import time
 project_root = Path(__file__).parent.parent.resolve()
 sys.path.insert(0, str(project_root))
 import os
@@ -24,77 +25,107 @@ def process_and_index():
     processor = DocumentProcessor()
     indexer = QdrantIndexer(collection_name="papers")
     
-    # clear old data before indexing new documents
-    indexer.clear_collection()
+    if st.button("Reset Index"):
+        # clear old data before indexing new documents
+        indexer.clear_collection()
 
     full_markdown = ""
     docs_to_index = []
 
     # Process uploaded files
     if st.session_state.uploaded_files:
-        md, docs = processor.process_uploaded_files(st.session_state.uploaded_files)
-        full_markdown += md + "\n"
+        _, docs = processor.process_uploaded_files(st.session_state.uploaded_files)
+        # full_markdown += md + "\n"
         docs_to_index.extend(docs)
 
     # Process URLs
     if st.session_state.get("file_urls"):
-        md, docs = processor.process_urls(st.session_state.file_urls)
-        full_markdown += md + "\n"
+        _, docs = processor.process_urls(st.session_state.file_urls)
+        # full_markdown += md + "\n"
         docs_to_index.extend(docs)
 
+    # for doc in docs_to_index:
+    #     indexer.index_document(
+    #         markdown_text=doc['markdown'],
+    #         doc_obj=doc['doc'],
+    #         source_name=doc['filename']
+    #     )
+
+    total_chunks = 0
     for doc in docs_to_index:
-        indexer.index_document(
-            markdown_text=doc['markdown'],
+        count = indexer.index_document(
             doc_obj=doc['doc'],
-            source_name=doc['filename']
+            source_name=doc['filename'] 
         )
+        total_chunks+=count
+    st.success(f"Indexed {total_chunks} chunks successfully.")
     
-    return full_markdown, indexer
+    return indexer
 
 
-def stream_response_from_api(query:str):
+def stream_response_from_api(query:str, max_retries: int = 5, backoff_factor:int = 2, initial_delay: float=1.0):
     """
-    Generator that streams tokens from the FASTAPI backend
+    Generator that streams tokens from the FASTAPI backend with retry on connections errors
     Yields token one by one fore real-time display.
     """
     payload = {"query": query}
-    try:
-        response = requests.post(
-            API_URL,
-            json = payload,
-            stream = True,
-            timeout = 300
-        )
-        response.raise_for_status()
+    attempt = 0
+    delay = initial_delay
+    while True:
+        try:
+            response = requests.post(
+                API_URL,
+                json = payload,
+                stream = True,
+                timeout = 300
+            )
+            response.raise_for_status()
 
-        # stream text chunks
-        for chunk in response.iter_content(decode_unicode=True):
-            if chunk:
-                yield chunk
-    except requests.exceptions.ConnectionError:
-        yield "Error: Could not connect to API at " + API_URL
-    except requests.exceptions.Timeout:
-        yield "Error: API request timed out"
-    except requests.exceptions.RequestException as e:
-        yield f"Error calling API: {str(e)}"
-    except Exception as e:
-        yield f"Unexpected error: {str(e)}"
+            # stream text chunks
+            for chunk in response.iter_content(decode_unicode=True):
+                if chunk:
+                    yield chunk
+
+                
+                # stop if user clicked cancel
+                if st.session_state.get("cancel_generation", False):
+                    try:
+                        response.close()
+                    except Exception:
+                        pass
+                    yield "\n[Generatioin stopped by user]\n"
+                    return
+            return
+        except requests.exceptions.ConnectionError:
+            attempt+=1
+            if attempt>max_retries:
+                yield "Error: Could not connect to API at " + API_URL
+                return
+            yield f"[Retrying connection... attempt {attempt}/{max_retries}]\n"
+            time.sleep(delay)
+            delay *=backoff_factor
+        except requests.exceptions.Timeout:
+            yield "Error: API request timed out"
+        except requests.exceptions.RequestException as e:
+            yield f"Error calling API: {str(e)}"
+        except Exception as e:
+            yield f"Unexpected error: {str(e)}"
 
 def initialise_session_state():
     if "uploaded_files" not in st.session_state:
         st.session_state.uploaded_files = []
     if "file_urls" not in st.session_state:
         st.session_state.file_urls = []
-    if  "vectorstore" not in st.session_state:
-        st.session_state.vectorstore = None
+    # if  "vectorstore" not in st.session_state:
+    #     st.session_state.vectorstore = None
     if "agent" not in st.session_state:
         st.session_state.agent = None
     if "messages" not in st.session_state:
         st.session_state.messages = []
     if "processing_status" not in st.session_state:
         st.session_state.processing_status = "not_started"
-    if "docling_docs" not in st.session_state:
-        st.session_state.docling_docs = []
+    if "cancel_generation" not in st.session_state:
+        st.session_state.cancel_generation = False
 
 def render_sidebar():
     """Render the sidebar with setup controls"""
@@ -134,7 +165,7 @@ def render_sidebar():
             st.info(f"{len(uploaded_files)} file(s) uploaded")
 
             # List uploaded files
-            with st.expander("Uploade Files"):
+            with st.expander("Uploaded Files"):
                 for file in uploaded_files:
                     st.write(f"- {file.name} ({file.type})")
         
@@ -151,10 +182,11 @@ def render_sidebar():
                 st.session_state.processing_status = "processing"
                 with st.spinner("Processing documents..."):
                     try:
-                        markdown, indexer = process_and_index()
+                        indexer = process_and_index()
                         st.session_state.vectorstore = indexer
                         st.session_state.processing_status = "completed"
                         st.session_state.agent = "Ready"
+                    
                     except Exception as e:
                         st.error(f"Error: {e}")
                         st.session_state.processing_status = "error"
@@ -214,7 +246,6 @@ def render_chat():
         - Compare information across multiple documents
         - Extract specific data or insight
         - Summarise document section
-
         """
         )
         return
@@ -224,16 +255,25 @@ def render_chat():
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # Chat input in bottom container (attempt to fix positioning in tabs)
+    # Chat input in bottom container
     with bottom():
         prompt = st.chat_input("Ask a question about your documents...")
     
     if prompt:
+        st.session_state.cancel_generation = False
+        st.session_state.current_stream = ""
         # add user message
         st.session_state.messages.append({"role":"user","content":prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
 
+        # stop button
+        stop_col1, stop_col2 = st.columns([1,3])
+        with stop_col1:
+            if st.button("Stop Generation", key=f"stop_gen_{int(time.time())}", help = "Stop streaming response"):
+                st.session_state.cancel_generation = True
+        with stop_col2:
+            st.write("")
         # get agent response
         with st.chat_message("assistant"):
             # create status and message placeholders
@@ -246,14 +286,18 @@ def render_chat():
 
                 # Stream response token by token
                 for token in stream_response_from_api(prompt):
-                    full_response += token
-                    # show cursor while streaming
-                    message_placeholder.markdown(full_response +"| ")
-                
-                # final response without cursor
+                    if st.session_state.get("cancel_generation", False):
+                        full_response += "\n[Generation stopped]\n"
+                        message_placeholder.markdown(full_response)
+                        break
+                    if token:
+                        st.session_state.current_stream +=token
+                        message_placeholder.markdown(st.session_state.current_stream)
+                        
+                full_response = st.session_state.current_stream
+                # show cursor while streaming
                 message_placeholder.markdown(full_response)
                 status_placeholder.empty()
-
 
             except Exception as e:
                 import traceback

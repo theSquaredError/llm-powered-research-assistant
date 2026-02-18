@@ -8,8 +8,8 @@ A production-grade backend system that answers research questions using a combin
 - Semantic search over research papers using embeddings + Qdrant
 - LLM-based answer generation with grounding
 - User feedback collection for training preference pairs
-<!-- - Supports DPO fine-tuning pipeline (HuggingFace TRL) -->
 - FastAPI backend with modular architecture
+<!-- - Supports DPO fine-tuning pipeline (HuggingFace TRL) -->
 <!-- - 📦 Containerized with Docker for deployment -->
 ---
 ## Current Challenges:
@@ -56,7 +56,7 @@ LLM-Powered-Research-Assistant/
 ├── data/                     # Raw arXiv papers
 ├── models/                   # Saved DPO fine-tuned models
 ├── scripts/                  # Ingestion + fine-tuning scripts
-│   ├── ingest.py             # Chunking + embedding logic
+│   ├── ingest3.py             # Chunking + embedding logic
 │   └── train_dpo.py          # DPO fine-tuning workflow
 ├── Dockerfile
 ├── requirements.txt
@@ -83,14 +83,14 @@ pip install -r requirements.txt
 ```bash
 docker run -p 6333:6333 qdrant/qdrant 
 ```   
-### 3. Run the FastAPI app
+### 3. Run the FastAPI app (in new shell)
 ```bash
 uvicorn app.main:app --reload
 ```
 Access the API at: http://localhost:8000/api/ask
 
 ### 4. Run the streamlit app 
-streamlit run frontend/app.py
+streamlit run frontend/app2.py
 ---
 
 ## 📬 API Endpoints
